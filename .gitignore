@@ -205,3 +205,24 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# ==========================================
+# CUSTOM RULES FOR DUBLIN BIKES PROJECT
+# ==========================================
+
+# 1. Protect Project Secrets (API Keys & DB Passwords)
+# dbinfo.py stores sensitive keys like JCKEY as recommended in lectures[cite: 262, 265].
+dbinfo.py
+
+# 2. Ignore Scraper Logs
+# Log files generated during automated execution (e.g., via crontab)[cite: 414].
+scraper.log
+*.log
+
+# 3. Data Strategy: Exclude Raw Files, Include "Golden Dataset"
+# Ignore unformatted raw files collected during the scraping process.
+data/raw/
+
+# White-list the 48-hour "Golden" SQL dump and weather backup for team sharing.
+!data/dataset/*.sql
+!data/dataset/*.csv
