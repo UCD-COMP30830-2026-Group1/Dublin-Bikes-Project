@@ -1,4 +1,4 @@
-from config import dbinfo
+from data_scripts.settings import dbconfig
 import requests
 import json
 import os
@@ -33,8 +33,8 @@ def main():
             for number in numbers:
                 url = f"https://api.jcdecaux.com/vls/v1/stations/{number}"
                 params = {
-                    "contract": dbinfo.NAME,
-                    "apiKey": dbinfo.JCKEY,
+                    "contract": dbconfig.NAME,
+                    "apiKey": dbconfig.JCKEY,
                 }
 
                 r = requests.get(url, params=params, timeout=30)
