@@ -11,16 +11,25 @@ def write_to_file(data):
     """
     Extracts only the required fields and appends to the JSON file.
     """
-    # 1. Extract weather data and create a clean record
+    # Create a unique ID based on the current time (e.g., 202602092012)
+    now = datetime.now(timezone.utc)
+    record_id = now.strftime("%Y%m%d%H%M%S")
+
     clean_record = {
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "temp": data.get("main", {}).get("temp"),
-        "humidity": data.get("main", {}).get("humidity"),
-        "wind_speed": data.get("wind", {}).get("speed"),
-        # Rain and Snow are often missing from the API if it's not currently precipitating, 
-        # so we use .get() with a default of 0.0
-        "rain": data.get("rain", {}).get("1h", 0.0),
-        "snow": data.get("snow", {}).get("1h", 0.0)
+        "record_id": record_id,
+        "location": {
+            "city": "Dublin",
+            "lat": 53.3498,
+            "lon": -6.2603
+        },
+        "timestamp": now.isoformat(),
+        "weather_data": {
+            "temp": data.get("main", {}).get("temp"),
+            "humidity": data.get("main", {}).get("humidity"),
+            "wind_speed": data.get("wind", {}).get("speed"),
+            "rain": data.get("rain", {}).get("1h", 0.0),
+            "snow": data.get("snow", {}).get("1h", 0.0)
+        }
     }
     
     # 2. Append to file
