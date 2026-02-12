@@ -28,7 +28,7 @@ class Availability(Base):
 # 3. Real-time weather forecast (saves every hour)
 class WeatherCurrent(Base):
     __tablename__='weather_current'
-    dt = Column(BigInteger,primary_key=True)
+    dt = Column(DateTime,primary_key=True)
     feels_like = Column(Float)
     humidity = Column(Integer)
     pressure = Column(Integer)
@@ -45,7 +45,7 @@ class WeatherCurrent(Base):
 # 4. Hourly Forecast
 class WeatherHourly(Base):
     __tablename__='weather_hourly'
-    dt = Column(BigInteger,primary_key=True)
+    dt = Column(DateTime,primary_key=True)
     future_dt = Column(DateTime,primary_key=True)
     feels_like = Column(Float)
     humidity = Column(Integer)
