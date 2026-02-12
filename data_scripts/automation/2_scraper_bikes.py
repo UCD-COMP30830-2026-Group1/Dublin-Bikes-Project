@@ -79,7 +79,7 @@ def scrape_bikes_automation():
             print(f"==== New additions: {count}.")
 
         except Exception as e:
-            session.rollback()  # 出错就回滚，保持数据库干净
+            session.rollback()  # Roll back if an error occurs, keeping the database clean.
             print(e)
             traceback.print_exc()
         finally:
