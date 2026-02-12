@@ -226,3 +226,5 @@ scraper.log
 # White-list the 48-hour "Golden" SQL dump and weather backup for team sharing.
 !data/dataset/*.sql
 !data/dataset/*.csv
+/.idea/*
+/.idea/inspectionProfiles/profiles_settings.xml
