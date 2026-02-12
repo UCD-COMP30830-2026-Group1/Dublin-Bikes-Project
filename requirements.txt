@@ -1,0 +1,14 @@
+# Basic Communication: Used to send messages to the API
+requests
+
+# Backend Framework: The skeleton of the project
+Flask
+
+# Database Connection: The bridge between Python and MySQL
+pymysql
+mysql-connector-python
+SQLAlchemy
+
+# Data Processing and Machine Learning: For processing ML data provided by the teacher later
+pandas
+scikit-learn

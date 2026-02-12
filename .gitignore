@@ -221,7 +221,7 @@ scraper.log
 
 # 3. Data Strategy: Exclude Raw Files, Include "Golden Dataset"
 # Ignore unformatted raw files collected during the scraping process.
-data/raw/
+# data/raw/
 
 # White-list the 48-hour "Golden" SQL dump and weather backup for team sharing.
 !data/dataset/*.sql
