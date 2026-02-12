@@ -8,7 +8,7 @@ import requests
 from datetime import datetime
 from sqlalchemy.orm import sessionmaker
 
-from dbinfo import CITY_LAT
+
 
 # 1. path fix
 current_dir = os.path.dirname(os.path.abspath(__file__))#.../automation
@@ -17,6 +17,7 @@ root_dir = os.path.dirname(parent_dir) #.../Dublin_Bikes_Projects
 sys.path.append(root_dir)
 
 import dbinfo
+from dbinfo import CITY_LAT
 from common.models_auto4ml import init_db,WeatherDaily,WeatherHourly,WeatherCurrent
 
 # 2.API Configuration
@@ -46,8 +47,7 @@ def get_rain_snow(item,key):
 
 
 def scrape_weather_automation():
-    # [Startup] The dynamic bicycle crawler is ready. Target database: {dbinfo.DB_NAME_ML})
-    print(f"[Startup] ====The dynamic bicycle crawler is ready. Target database: {dbinfo.DB_NAME_ML}")
+    print(f"[Startup] ====The dynamic weather crawler is ready. Target database: {dbinfo.DB_NAME_ML}")
     print("====This is an infinite loop script. It runs once per hour. Press Ctrl+C to stop it.\n")
 
     engine = init_db(dbinfo.URI_ML)
@@ -60,103 +60,125 @@ def scrape_weather_automation():
         print(f"[{timestamp_str}] ====Starting a new round of weather scraping...")
         session = Session() #Each cycle create a new Session instance
 
-        try:
+        data = None
+
+        # ==========================================
+        # Add network request retry mechanism
+        max_retries = 3
+        for attempt in range(max_retries):
             # Step A: ask API
-            # https://api.openweathermap.org/data/3.0/onecall?lat={lat}&lon={lon}&exclude={part}&appid={API key}
-            params = {
-                "lat":LAT,
-                "lon":LNG,
-                "appid":WEATHER_KEY,
-                "exclude":"minutely,alerts",
-                "units":"metric"
-            }
+            try:
+                params = {
+                    "lat": LAT,
+                    "lon": LNG,
+                    "appid": WEATHER_KEY,
+                    "exclude": "minutely,alerts",
+                    "units": "metric"
+                }
 
-            response = requests.get(WEATHER_URI, params=params, timeout=30)
-            response.raise_for_status()  #  403/404/500
+                print(f"====Requesting API (Attempt {attempt + 1}/{max_retries})...")
+                response = requests.get(WEATHER_URI, params=params, timeout=30)
+                response.raise_for_status()
 
-            data = response.json()
-            # print(json.dumps(data, indent=4, ensure_ascii=False))
-            print(f"====Successfully retrieved. A total of {len(data)} station data points were obtained.")
+                data = response.json()
+                print(f"Successfully retrieved. Got {len(data)} root keys.")
+                # print(json.dumps(data, indent=4, ensure_ascii=False))
+                break  # If successful, break out of the retry loop
 
-            # Step B: JSON backup
-            json_filename = os.path.join(SAVE_DIR, f"weather_{timestamp_str}.json")
+            except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
+                print(f"!!!!Network Error (Attempt {attempt + 1}): {e}")
+                if attempt < max_retries - 1:
+                    time.sleep(10)
+                else:
+                    print("!!!!Max retries exceeded. Skipping this round.")
+            except Exception as e:
+                print(f"Unexpected Error: {e}")
+                break
 
-            with open(json_filename, "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=4, ensure_ascii=False)
-                print(f"====Weather data has been backed up")
+        if data:
+            try:
+                # Step B: JSON backup
+                json_filename = os.path.join(SAVE_DIR, f"weather_{timestamp_str}.json")
 
-            # Step C: Store in the database
-            # C.1 current weather data
-            # If empty data is found, it is placed in an empty dictionary {}.
-            current = data.get('current',{})
-            weather_now = WeatherCurrent(
-                dt=datetime.now(),
-                temp=current.get('temp'),
-                feels_like=current.get('feels_like'),
-                pressure=current.get('pressure'),
-                humidity=current.get('humidity'),
-                uvi=current.get('uvi'),
-                wind_speed=current.get('wind_speed'),
-                wind_gust=current.get('wind_gust'),
-                weather_id=current['weather'][0]['id'],
-                sunrise=timestamp_2_dt(current.get('sunrise')),
-                sunset=timestamp_2_dt(current.get('sunset')),
-                # Avoiding the rain/snow field from being empty.
-                rain_1h=get_rain_snow(current, 'rain'),
-                snow_1h=get_rain_snow(current, 'snow')
-            )
-            session.add(weather_now)
+                with open(json_filename, "w", encoding="utf-8") as f:
+                    json.dump(data, f, indent=4, ensure_ascii=False)
+                    print(f"====Weather data has been backed up")
 
-            # C.2 Hourly weather data
-            hourly_list = data.get('hourly',[])
-            for item in hourly_list:
-                weather_hourly = WeatherHourly(
+                # Step C: Store in the database
+                # C.1 current weather data
+                # If empty data is found, it is placed in an empty dictionary {}.
+                current = data.get('current',{})
+                weather_now = WeatherCurrent(
                     dt=datetime.now(),
-                    future_dt = timestamp_2_dt(item.get('dt')), #future timestamp
-                    feels_like = item.get('feels_like'),
-                    humidity = item.get('humidity'),
-                    pop = item.get('pop'),
-                    pressure = item.get('pressure'),
-                    temp = item.get('temp'),
-                    uvi = item.get('uvi'),
-                    weather_id = item['weather'][0]['id'],
-                    wind_speed = item.get('wind_speed'),
-                    wind_gust = item.get('wind_gust'),
-                    rain_1h = get_rain_snow(item,'rain'),
-                    snow_1h = get_rain_snow(item,'snow')
+                    temp=current.get('temp'),
+                    feels_like=current.get('feels_like'),
+                    # Use standard atmospheric pressure 1013 as the default value to prevent null values.
+                    pressure=current.get('pressure',1013),
+                    humidity=current.get('humidity',0),
+                    uvi=current.get('uvi',0),
+                    wind_speed=current.get('wind_speed',0),
+                    wind_gust=current.get('wind_gust',0),
+                    # 800 (sunny day) is used as the default value.
+                    weather_id=current.get('weather', [{}])[0].get('id', 800),
+                    sunrise=timestamp_2_dt(current.get('sunrise',int(time.time()))),
+                    sunset=timestamp_2_dt(current.get('sunset',int(time.time()))),
+                    # Avoiding the rain/snow field from being empty.
+                    rain_1h=get_rain_snow(current, 'rain'),
+                    snow_1h=get_rain_snow(current, 'snow')
                 )
-                session.add(weather_hourly)
+                session.add(weather_now)
 
-            # C.3 7-day weather data
-            daily_list = data.get('daily',[])
-            for item in daily_list:
-                weather_daily = WeatherDaily(
-                    dt=datetime.now(),
-                    future_dt = timestamp_2_dt(item.get('dt')),
-                    humidity = item.get('humidity'),
-                    pop = item.get('pop'),
-                    pressure = item.get('pressure'),
-                    temp_max = item.get('temp').get('max'),
-                    temp_min = item.get('temp').get('min'),
-                    uvi = item.get('uvi'),
-                    weather_id = item['weather'][0]['id'],
-                    wind_speed = item.get('wind_speed'),
-                    wind_gust = item.get('wind_gust'),
-                    rain = item.get('rain',0),
-                    snow = item.get('snow',0)
-                )
-                session.add(weather_daily)
-            session.commit()
-            print(f"====Weather data successfully added: Current(1) + Hourly({len(hourly_list)}) + Daily({len(daily_list)})")
-        except requests.exceptions.ConnectionError:
-            print("[Network Error] Unable to connect to OpenWeatherMap, skip this cycle.")
-        except Exception as e:
-            session.rollback()
+                # C.2 Hourly weather data
+                hourly_list = data.get('hourly',[])
+                for item in hourly_list:
+                    weather_hourly = WeatherHourly(
+                        dt=datetime.now(),
+                        future_dt = timestamp_2_dt(item.get('dt')), #future timestamp
+                        feels_like = item.get('feels_like',0),
+                        humidity = item.get('humidity',0),
+                        pop = item.get('pop',0),
+                        # Use standard atmospheric pressure 1013 as the default value
+                        pressure = item.get('pressure',1013),
+                        temp = item.get('temp',0),
+                        uvi = item.get('uvi',0),
+                        # 800 (sunny day) is used as the default value.
+                        weather_id = item.get('weather', [{}])[0].get('id', 800),
+                        wind_speed = item.get('wind_speed',0),
+                        wind_gust = item.get('wind_gust',0),
+                        rain_1h = get_rain_snow(item,'rain'),
+                        snow_1h = get_rain_snow(item,'snow')
+                    )
+                    session.add(weather_hourly)
 
-            print(f"Weather fetching failed: {e}")
-            traceback.print_exc()
-        finally:
-            session.close()
+                # C.3 7-day weather data
+                daily_list = data.get('daily',[])
+                for item in daily_list:
+                    weather_daily = WeatherDaily(
+                        dt=datetime.now(),
+                        future_dt = timestamp_2_dt(item.get('dt')),
+                        humidity = item.get('humidity',0),
+                        pop = item.get('pop',0),
+                        pressure = item.get('pressure',1013),
+                        temp_max = item.get('temp',{}).get('max',0),
+                        temp_min = item.get('temp',{}).get('min',0),
+                        uvi = item.get('uvi',0),
+                        # 800 (sunny day) is used as the default value.
+                        weather_id = item.get('weather',[{}])[0].get('id',800),
+                        wind_speed = item.get('wind_speed',0),
+                        wind_gust = item.get('wind_gust',0),
+                        rain = item.get('rain',0),
+                        snow = item.get('snow',0)
+                    )
+                    session.add(weather_daily)
+                session.commit()
+                print(f"====Weather data successfully added: Current(1) + Hourly({len(hourly_list)}) + Daily({len(daily_list)})")
+            except Exception as e:
+                session.rollback()
+
+                print(f"Weather fetching failed: {e}")
+                traceback.print_exc()
+
+        session.close()
 
         drift_time = time.time()-start_time
         sleep_time = max(0, 3600 - drift_time)
