@@ -1,0 +1,22 @@
+services:
+  # Dynamic bikes data scraping
+  scraper-bikes:
+    build: .
+    container_name: bikes-bot
+    command: python data_scripts/automation/2_scraper_bikes.py
+    restart: always
+    volumes:
+      - ./dbinfo.py:/app/dbinfo.py
+    environment:
+      - TZ=Europe/Dublin
+
+  # Dynamic weather data scraping
+  scraper-weather:
+    build: .
+    container_name: weather-bot
+    command: python data_scripts/automation/3_scraper_weather.py
+    restart: always
+    volumes:
+      - ./dbinfo.py:/app/dbinfo.py
+    environment:
+      - TZ=Europe/Dublin
