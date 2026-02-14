@@ -31,6 +31,42 @@ SAVE_DIR = os.path.join(root_dir,"data","raw","automation","weather")
 if not os.path.exists(SAVE_DIR):
     os.makedirs(SAVE_DIR)
 
+
+# 5.Since EC2 ran out of memory, the following defensive code was added to periodically delete JSON files.
+def cleanup_old_json(directory, retention_days=7):
+    """
+    Delete JSON files older than retention_days.
+    """
+    now = time.time()
+    cutoff = now - (retention_days * 86400)  # 86400 seconds = 1 day
+
+    if not os.path.exists(directory):
+        return
+
+    print(f"====Checking for files older than {retention_days} days to delete...")
+    deleted_count = 0
+
+    try:
+        for filename in os.listdir(directory):
+            if not filename.endswith(".json"):
+                continue
+
+            filepath = os.path.join(directory, filename)
+            # Check file modification time
+            if os.path.getmtime(filepath) < cutoff:
+                try:
+                    os.remove(filepath)
+                    deleted_count += 1
+                    # Optional: print(f"Deleted old file: {filename}")
+                except OSError as e:
+                    print(f"Error deleting {filename}: {e}")
+
+        if deleted_count > 0:
+            print(f"====Cleanup complete. Deleted {deleted_count} old JSON files.")
+
+    except Exception as e:
+        print(f"Cleanup failed: {e}")
+
 # 4. Core logic
 def timestamp_2_dt(timestamp):
     return datetime.fromtimestamp(timestamp)
@@ -103,6 +139,9 @@ def scrape_weather_automation():
                 with open(json_filename, "w", encoding="utf-8") as f:
                     json.dump(data, f, indent=4, ensure_ascii=False)
                     print(f"====Weather data has been backed up")
+
+                cleanup_old_json(SAVE_DIR, retention_days=7)
+
 
                 # Step C: Store in the database
                 # C.1 current weather data
