@@ -1,0 +1,10 @@
+.git
+.idea
+__pycache__
+*.pyc
+*.pyo
+venv
+.venv
+data/raw/automation/bikes/*
+data/raw/automation/weather/*
+data/raw/automation/stations/*
