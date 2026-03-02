@@ -37,7 +37,7 @@ services:
     container_name: dublin-bikes-api
     restart: always
     ports:
-      - "5000:5000" # Exposes the Flask service to the EC2 host for public/internal access
+      - "80:5000" # External network port 80 corresponds to port 5000 inside the container, bypassing campus network blocking.
     deploy:
       resources:
         limits:
@@ -45,6 +45,8 @@ services:
           cpus: '0.60'
     volumes:
       - ./dbinfo.py:/app/dbinfo.py
+    env_file:
+      - .env
     environment:
       - TZ=Europe/Dublin
       - FLASK_ENV=production
