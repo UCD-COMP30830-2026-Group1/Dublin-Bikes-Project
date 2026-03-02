@@ -1,4 +1,6 @@
 # common/api_response.py
+from datetime import datetime, timezone
+
 from flask import jsonify
 
 class ApiResponse:
@@ -15,6 +17,7 @@ class ApiResponse:
         :return: tuple: A Flask JSON response object and the HTTP status code 200.
         """
         return jsonify({
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "code": 200,
             "message": message,
             "data": data
@@ -28,8 +31,10 @@ class ApiResponse:
         :param code:(int, optional): The specific HTTP status code representing the error (e.g., 400 for Bad Request, 404 for Not Found, 500 for Server Error). Defaults to 500.
         :return: tuple: A Flask JSON response object containing the error message and the specified HTTP status code.
         """
+        status_code = int(code) if str(code).isdigit() else 500
         return jsonify({
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "code": code,
             "message": message,
             "data": None
-        }), code
+        }), status_code

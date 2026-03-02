@@ -61,7 +61,7 @@ def get_weather():
 
 ### get 24hours weather data
 # @app.route("/api/weather/24h")
-@weather_bp.route("/24h")
+@weather_bp.route("/forecast")
 def get_weather_24hours():
 
     try:
@@ -99,10 +99,9 @@ def get_weather_24hours():
                 "lat": LAT,
                 "lon": LON
             },
-            "timestamp": now.isoformat(),
             "24_hour_forecast": hourly_data
         }
 
-        return ApiResponse.ok(response,"24h weather fetched successfully")
+        return ApiResponse.ok(response,"24h weather forecast fetched successfully")
     except Exception as e:
         return ApiResponse.error(message=str(e))
