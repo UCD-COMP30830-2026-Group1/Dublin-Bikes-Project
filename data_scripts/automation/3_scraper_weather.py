@@ -18,7 +18,7 @@ sys.path.append(root_dir)
 
 import dbinfo
 from dbinfo import CITY_LAT
-from common.models_auto4ml import init_db,WeatherDaily,WeatherHourly,WeatherCurrent
+from common.models import init_db,WeatherDaily,WeatherHourly,WeatherCurrent
 
 # 2.API Configuration
 WEATHER_KEY = dbinfo.WEATHER_KEY
