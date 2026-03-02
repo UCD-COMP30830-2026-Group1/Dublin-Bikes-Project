@@ -56,6 +56,7 @@ def get_static_stations():
     finally:
         session.close()
 
+#Developed by Youssef Bouadara
 @station_bp.route('/historical', methods=["GET"])
 def get_historical_availability():
     session = Session()
@@ -70,10 +71,7 @@ def get_historical_availability():
                 query = query.filter(Availability.number==station_number)
             except ValueError:
                 return ApiResponse.error("station number must be an integer", 400)
-                # return jsonify({"status": "error", "message": "station number must be an integer"}), 400
 
-
-            # historical_data = [rec for rec in historical_data if rec.get("station_number") == station_number]
         results = query.order_by(Availability.last_update.desc()).limit(300).all()
 
         # Nest data by station

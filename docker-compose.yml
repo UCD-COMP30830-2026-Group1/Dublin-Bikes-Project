@@ -1,21 +1,21 @@
 services:
-  # Dynamic bikes data scraping
+  # 1. Dynamic bikes data scraping
   scraper-bikes:
     build: .
     container_name: bikes-bot
     command: python data_scripts/automation/2_scraper_bikes.py
-    restart: always
+    restart: always # Ensure the scraper automatically recovers from crashes
     deploy:
       resources:
         limits:
-          memory: 200M
+          memory: 200M  # Prevent resource exhaustion on the EC2 instance
           cpus: '0.40'
     volumes:
-      - ./dbinfo.py:/app/dbinfo.py
+      - ./dbinfo.py:/app/dbinfo.py  # Inject database credentials securely from the host
     environment:
-      - TZ=Europe/Dublin
+      - TZ=Europe/Dublin # Align container logs with local Irish time
 
-  # Dynamic weather data scraping
+  # 2. Dynamic weather data scraping
   scraper-weather:
     build: .
     container_name: weather-bot
@@ -30,3 +30,21 @@ services:
       - ./dbinfo.py:/app/dbinfo.py
     environment:
       - TZ=Europe/Dublin
+
+  # 3. Dynamic weather data scraping
+  flask-backend:
+    build: .
+    container_name: dublin-bikes-api
+    restart: always
+    ports:
+      - "5000:5000" # Exposes the Flask service to the EC2 host for public/internal access
+    deploy:
+      resources:
+        limits:
+          memory: 500M  # Higher memory limit to handle concurrent API requests
+          cpus: '0.60'
+    volumes:
+      - ./dbinfo.py:/app/dbinfo.py
+    environment:
+      - TZ=Europe/Dublin
+      - FLASK_ENV=production
