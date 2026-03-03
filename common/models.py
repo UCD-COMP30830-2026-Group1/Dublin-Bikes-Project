@@ -1,4 +1,4 @@
-# model_auto4ml.py
+# models.py
 from sqlalchemy import Integer, Column, String, Float, BigInteger, create_engine, DateTime
 from sqlalchemy.orm import declarative_base
 

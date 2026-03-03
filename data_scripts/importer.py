@@ -10,13 +10,13 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 root_dir = os.path.dirname(current_dir)
 sys.path.append(root_dir)
 
-# Add data/dataset to sys.path to find models_auto4ml.py
+# Add data/dataset to sys.path to find models.py
 dataset_dir = os.path.join(root_dir, 'data', 'dataset')
 sys.path.append(dataset_dir)
 
 import dbinfo
 # Import models
-from common.models_auto4ml import Station, Availability, WeatherCurrent, init_db
+from common.models import Station, Availability, WeatherCurrent, init_db
 
 def load_json(file_path):
     """Helper to load JSON file."""

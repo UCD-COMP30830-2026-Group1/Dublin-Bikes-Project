@@ -15,7 +15,7 @@ root_dir = os.path.dirname(parent_dir) #.../Dublin_Bikes_Projects
 sys.path.append(root_dir)
 
 import dbinfo
-from common.models_auto4ml import init_db,Availability
+from common.models import init_db,Availability
 
 # 2.API Configuration
 API_KEY = dbinfo.JCKEY
