@@ -14,7 +14,7 @@ export default function Dashboard() {
                 ⚠️ Strong winds expected this evening (25-35 km/h) (just an example)
             </div>
             <div style={{flex: 1, padding: '15px 20px', display: 'flex', gap: '20px'}}>
-                Weather information
+
             </div>
         </footer>
     );
