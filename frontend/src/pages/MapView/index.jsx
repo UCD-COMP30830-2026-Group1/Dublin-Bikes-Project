@@ -7,7 +7,7 @@ import {useEffect, useState} from "react";
 import {fetchStaticStations} from "../../api/stationService.js";
 
 export default function MapView() {
-    // 1. Vite-specific syntax for reading environment variables (it must be `import.meta.env`).
+    // Vite-specific syntax for reading environment variables (it must be `import.meta.env`).
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_KEY;
 
     const [stations, setStations] = useState([]);
@@ -17,17 +17,19 @@ export default function MapView() {
     useEffect(() => {
         const loadStations = async () => {
         try {
-            console.log("Request data from the Flask backend");
+            const response = await fetchStaticStations();
+            
+            // Extract the array. If response.data exists, use it; otherwise assume response is the array.
+            const actualData = response.data || response;
 
-            const stationData = await fetchStaticStations();
-
-            console.log("Data successfully retrieved!");
-            console.log("Total number of stations found:", stationData.length);
-            console.log("The data looks like:", stationData);
-
-            setStations(stationData);
+            if (Array.isArray(actualData)) {
+                console.log("Success! Stations found:", actualData.length);
+                setStations(actualData);
+            } else {
+                console.error("Data received is not an array:", actualData);
+            }
         } catch (error) {
-            console.error(error);
+            console.error("Fetch error:", error);
         }
     };
     loadStations();

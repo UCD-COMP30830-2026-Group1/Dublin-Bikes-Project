@@ -23,12 +23,12 @@ export default function StationMarkers({ stations, onStationClick }) {
   return (
     <>
       {stations.map((station) => {
-        // 2. DATA PROTECTION: Skip this marker if coordinates are missing
-        const lat = station.position?.lat;
-        const lng = station.position?.lng;
+        // Use the flat keys position_lat and position_lng
+        const lat = parseFloat(station.position_lat);
+        const lng = parseFloat(station.position_lng);
 
+        // Safety check: skip if data is missing or invalid
         if (isNaN(lat) || isNaN(lng)) {
-          console.warn(`Station ${station.number} has invalid coordinates:`, station);
           return null; 
         }
 
@@ -37,22 +37,20 @@ export default function StationMarkers({ stations, onStationClick }) {
         return (
           <AdvancedMarker
             key={station.number}
-            position={{
-                lat: station.position.lat,
-                lng: station.position.lng
-            }}
+            position={{ lat, lng }} // Google expects an object {lat: number, lng: number}
             onMouseEnter={() => setHoveredStation(station)}
             onMouseLeave={() => setHoveredStation(null)}
             onClick={() => onStationClick(station)}
           >
             <Pin background={markerColor} borderColor={'#2c3e50'} glyphColor={'#ffffff'} />
-
+            
+            {/* Tooltip logic remains the same */}
             {hoveredStation?.number === station.number && (
               <InfoWindow position={{ lat, lng }} disableAutoPan={true}>
-                <div style={{ color: '#2c3e50', fontSize: '12px', padding: '2px' }}>
-                  <div style={{ fontWeight: 'bold' }}>{station.name}</div>
-                  <div>🚲 Bikes: {station.available_bikes}</div>
-                  <div>🅿️ Stands: {station.available_bike_stands}</div>
+                <div style={{ color: '#2c3e50', fontSize: '12px' }}>
+                  <strong>{station.name}</strong><br/>
+                  🚲 Bikes: {station.available_bikes}<br/>
+                  🅿️ Stands: {station.available_bike_stands}
                 </div>
               </InfoWindow>
             )}
