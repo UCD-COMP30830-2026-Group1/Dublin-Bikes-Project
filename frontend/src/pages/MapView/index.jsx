@@ -2,32 +2,40 @@
 import {APIProvider, Map, AdvancedMarker, Pin} from '@vis.gl/react-google-maps';
 import {DUBLIN_CENTER} from "../../config/constants.js";
 import Legend from "./components/Legend.jsx";
+import StationMarkers from "./components/StationMarkers.jsx";
 import {useEffect, useState} from "react";
 import {fetchStaticStations} from "../../api/stationService.js";
 
 export default function MapView() {
-    // 1. Vite-specific syntax for reading environment variables (it must be `import.meta.env`).
+    // Vite-specific syntax for reading environment variables (it must be `import.meta.env`).
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_KEY;
 
     const [stations, setStations] = useState([]);
+    // This state is used to track which station is currently selected (for the sidebar details view)
+    const [selectedStation, setSelectedStation] = useState(null);
 
     useEffect(() => {
         const loadStations = async () => {
-            try {
-                console.log("Request data from the Flask backend");
-                const stationData = await fetchStaticStations();
-                console.log("Data successfully retrieved! Total number of stations found:\", stationData.length");
-                console.log("The data looks like:", stationData);
+        try {
+            const response = await fetchStaticStations();
+            
+            // Extract the array. If response.data exists, use it; otherwise assume response is the array.
+            const actualData = response.data || response;
 
-                setStations(stationData.data);
-            } catch (error) {
-                console.log(error);
+            if (Array.isArray(actualData)) {
+                console.log("Success! Stations found:", actualData.length);
+                setStations(actualData);
+            } else {
+                console.error("Data received is not an array:", actualData);
             }
-        };
-        loadStations();
+        } catch (error) {
+            console.error("Fetch error:", error);
+        }
+    };
+    loadStations();
     }, []);
 
-    // 2. if the apikey not exists, return error directly
+    // If the apikey not exists, return error directly
     if (!apiKey) {
         return (
             <div
@@ -38,53 +46,47 @@ export default function MapView() {
             </div>
         );
     }
-    // 3. otherwise return the map loaded from api key
+    // If it does exist, return the map loaded from api key
     return (
         // The outer container must have width and height. Otherwise, the rendered map will be 0x0.
         <div style={{width: '100%', height: '100%', position: 'relative'}}>
+            {/* The Sidebar Element: Only renders when a station is clicked */}
+                {selectedStation && (
+                    <div className="sidebar-info-window">
+                    <button className="close-btn" onClick={() => setSelectedStation(null)}>×</button>
+                    <h2>{selectedStation.name}</h2>
+                    <hr />
+                    <div className="stats-container">
+                        <div className="stat-card">
+                            <span>Available Bikes</span>
+                            <strong>{selectedStation.available_bikes}</strong>
+                        </div>
+                        <div className="stat-card">
+                            <span>Available Stands</span>
+                            <strong>{selectedStation.available_bike_stands}</strong>
+                        </div>
+                    </div>
+                    <p><strong>Address:</strong> {selectedStation.address}</p>
+                    <p><strong>Status:</strong> {selectedStation.status}</p>
+                </div>
+            )}
 
-            {/* APIProvider：Responsible for quietly loading Google's JS scripts in the background */}
             <APIProvider apiKey={apiKey}>
-
-                {/* Map：The visual map component */}
                 <Map
                     defaultCenter={DUBLIN_CENTER}
                     defaultZoom={13}
-                    gestureHandling={'greedy'} // Allows users to drag directly with a single finger/mouse
-                    disableDefaultUI={true}    // Disables the default complex controls (looks more sophisticate)
-                    zoomControl={false}
-                    mapId={"DEMO_MAP_ID"}      // Prepares for loading of AdvancedMarker
+                    gestureHandling={'greedy'}
+                    disableDefaultUI={true}
+                    mapId={"DEMO_MAP_ID"}
                 >
+                    {/* THE MARKER LAYER: Passing the selection logic down */}
+                    <StationMarkers 
+                        stations={stations} 
+                        onStationClick={(station) => setSelectedStation(station)} 
+                    />
                 </Map>
-
-                {/*/!*Loading the static station,The following is a demonstration of how to use scraped station data. Uncomment the comments if needed.*!/*/}
-                {/*{stations.map((station) => (*/}
-                {/*    <AdvancedMarker*/}
-                {/*        // 1. Unique key required by React for optimal list rendering and DOM diffing*/}
-                {/*        key={station.number}*/}
-
-                {/*        // 2. Exact geographical coordinates to position the marker on the map*/}
-                {/*        position={{*/}
-                {/*            lat: station.position_lat,*/}
-                {/*            lng: station.position_lng*/}
-                {/*        }}*/}
-
-                {/*        // 3. Native tooltip displayed on mouse hover (improves UX and Accessibility)*/}
-                {/*        title={station.name}*/}
-                {/*    >*/}
-                {/*        /!* Highly customizable Pin component reflecting the Dublin Bikes brand identity *!/*/}
-                {/*        <Pin*/}
-                {/*            background={'#0ba83b'} // Classic Dublin Bikes Green*/}
-                {/*            borderColor={'#006400'} // Darker green for contrast*/}
-                {/*            glyphColor={'white'}    // White center dot*/}
-                {/*        />*/}
-                {/*    </AdvancedMarker>*/}
-                {/*))}*/}
-
             </APIProvider>
-
-            <Legend/>
-
+            <Legend />
         </div>
     );
 }
