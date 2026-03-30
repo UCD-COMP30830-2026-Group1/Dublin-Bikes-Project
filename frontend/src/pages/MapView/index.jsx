@@ -4,7 +4,7 @@ import { DUBLIN_CENTER } from "../../config/constants.js";
 import Legend from "./components/Legend.jsx";
 import StationMarkers from "./components/StationMarkers.jsx";
 import { useEffect, useState } from "react";
-import { fetchLiveStations } from "../../api/stationService.js";
+import { fetchRealtimeStations } from "../../api/stationService.js";
 
 export default function MapView() {
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_KEY;
@@ -15,17 +15,12 @@ export default function MapView() {
     useEffect(() => {
         const loadStations = async () => {
             try {
-                const response = await fetchLiveStations();
-                const actualData = response.data || response;
-
-                if (Array.isArray(actualData)) {
-                    console.log("Live stations loaded:", actualData.length);
-                    setStations(actualData);
-                } else {
-                    console.error("Data received is not an array:", actualData);
-                }
+                const response = await fetchRealtimeStations();
+                const data = response.data || response;
+                console.log("Realtime stations loaded:", data.length, "| Sample:", data[0]);
+                setStations(data);
             } catch (error) {
-                console.error("Fetch error:", error);
+                console.error("Failed to load stations:", error);
             }
         };
         loadStations();
@@ -42,7 +37,6 @@ export default function MapView() {
     return (
         <div style={{ width: '100%', height: '100%', position: 'relative' }}>
 
-            {/* Click panel — overlaid on the map */}
             {selectedStation && (
                 <div className="sidebar-info-window">
                     <button className="close-btn" onClick={() => setSelectedStation(null)}>×</button>

@@ -21,10 +21,11 @@ export default function StationMarkers({ stations, onStationClick }) {
     return (
         <>
             {stations.map((station) => {
-                const lat = parseFloat(station.position_lat);
-                const lng = parseFloat(station.position_lng);
+                // Realtime API returns position as nested { lat, lng } object
+                const lat = station.position?.lat;
+                const lng = station.position?.lng;
 
-                if (isNaN(lat) || isNaN(lng)) return null;
+                if (!lat || !lng) return null;
 
                 const markerColor = getMarkerColor(station.available_bikes, station.bike_stands);
 
@@ -35,10 +36,8 @@ export default function StationMarkers({ stations, onStationClick }) {
                         onClick={() => onStationClick(station)}
                     >
                         {/*
-                          * Listeners go on this inner <div>, NOT on AdvancedMarker.
-                          * AdvancedMarker's onMouseEnter/Leave are unreliable in
-                          * @vis.gl/react-google-maps — attaching to the DOM element
-                          * inside is the correct pattern.
+                          * Listeners on the inner <div>, not AdvancedMarker —
+                          * required for reliable hover in @vis.gl/react-google-maps
                         */}
                         <div
                             onMouseEnter={() => setHoveredStation(station)}
@@ -54,12 +53,12 @@ export default function StationMarkers({ stations, onStationClick }) {
                 );
             })}
 
-            {/* InfoWindow rendered ONCE outside the loop — avoids AdvancedMarker nesting conflict */}
+            {/* Single InfoWindow rendered outside the loop */}
             {hoveredStation && (
                 <InfoWindow
                     position={{
-                        lat: parseFloat(hoveredStation.position_lat),
-                        lng: parseFloat(hoveredStation.position_lng),
+                        lat: hoveredStation.position.lat,
+                        lng: hoveredStation.position.lng,
                     }}
                     disableAutoPan={true}
                     onCloseClick={() => setHoveredStation(null)}
