@@ -8,10 +8,17 @@ export async function fetchStaticStations() {
     console.log("Actual request url:", targetUrl);
 
     const response = await fetch(targetUrl);
+    if (!response.ok) throw new Error(`Request failed. Error: ${response.status}`);
+    return await response.json();
+}
 
-    if (!response.ok) {
-        throw new Error(`Request failed. Error: ${response.status}`);
-    }
+// NEW: Fetches stations merged with latest availability from DB.
+// Returns each station with available_bikes, available_bike_stands, status.
+export async function fetchLiveStations() {
+    const targetUrl = `${API_BASE_URL}/stations/live`;
+    console.log("Fetching live stations:", targetUrl);
 
+    const response = await fetch(targetUrl);
+    if (!response.ok) throw new Error(`Live fetch failed. Error: ${response.status}`);
     return await response.json();
 }

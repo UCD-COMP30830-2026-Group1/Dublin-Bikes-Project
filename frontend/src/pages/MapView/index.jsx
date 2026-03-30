@@ -1,73 +1,69 @@
 // src/pages/MapView/index.jsx
-import {APIProvider, Map, AdvancedMarker, Pin} from '@vis.gl/react-google-maps';
-import {DUBLIN_CENTER} from "../../config/constants.js";
+import { APIProvider, Map } from '@vis.gl/react-google-maps';
+import { DUBLIN_CENTER } from "../../config/constants.js";
 import Legend from "./components/Legend.jsx";
 import StationMarkers from "./components/StationMarkers.jsx";
-import {useEffect, useState} from "react";
-import {fetchStaticStations} from "../../api/stationService.js";
+import { useEffect, useState } from "react";
+import { fetchLiveStations } from "../../api/stationService.js";
 
 export default function MapView() {
-    // Vite-specific syntax for reading environment variables (it must be `import.meta.env`).
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_KEY;
 
     const [stations, setStations] = useState([]);
-    // This state is used to track which station is currently selected (for the sidebar details view)
     const [selectedStation, setSelectedStation] = useState(null);
 
     useEffect(() => {
         const loadStations = async () => {
-        try {
-            const response = await fetchStaticStations();
-            
-            // Extract the array. If response.data exists, use it; otherwise assume response is the array.
-            const actualData = response.data || response;
+            try {
+                const response = await fetchLiveStations();
+                const actualData = response.data || response;
 
-            if (Array.isArray(actualData)) {
-                console.log("Success! Stations found:", actualData.length);
-                setStations(actualData);
-            } else {
-                console.error("Data received is not an array:", actualData);
+                if (Array.isArray(actualData)) {
+                    console.log("Live stations loaded:", actualData.length);
+                    setStations(actualData);
+                } else {
+                    console.error("Data received is not an array:", actualData);
+                }
+            } catch (error) {
+                console.error("Fetch error:", error);
             }
-        } catch (error) {
-            console.error("Fetch error:", error);
-        }
-    };
-    loadStations();
+        };
+        loadStations();
     }, []);
 
-    // If the apikey not exists, return error directly
     if (!apiKey) {
         return (
-            <div
-                style={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', color: 'red'}}>
-                <h2> Error: Google Maps API Key is missing!</h2>
-                <br/>
-                <p>Please check your .env file and restart the server.</p>
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', color: 'red' }}>
+                <h2>Error: Google Maps API Key is missing!</h2>
             </div>
         );
     }
-    // If it does exist, return the map loaded from api key
+
     return (
-        // The outer container must have width and height. Otherwise, the rendered map will be 0x0.
-        <div style={{width: '100%', height: '100%', position: 'relative'}}>
-            {/* The Sidebar Element: Only renders when a station is clicked */}
-                {selectedStation && (
-                    <div className="sidebar-info-window">
+        <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+
+            {/* Click panel — overlaid on the map */}
+            {selectedStation && (
+                <div className="sidebar-info-window">
                     <button className="close-btn" onClick={() => setSelectedStation(null)}>×</button>
                     <h2>{selectedStation.name}</h2>
                     <hr />
                     <div className="stats-container">
                         <div className="stat-card">
                             <span>Available Bikes</span>
-                            <strong>{selectedStation.available_bikes}</strong>
+                            <strong>{selectedStation.available_bikes ?? '—'}</strong>
                         </div>
                         <div className="stat-card">
-                            <span>Available Stands</span>
-                            <strong>{selectedStation.available_bike_stands}</strong>
+                            <span>Free Stands</span>
+                            <strong>{selectedStation.available_bike_stands ?? '—'}</strong>
                         </div>
                     </div>
-                    <p><strong>Address:</strong> {selectedStation.address}</p>
-                    <p><strong>Status:</strong> {selectedStation.status}</p>
+                    <p style={{ fontSize: '0.85rem', marginBottom: '6px' }}>
+                        <strong>Address:</strong> {selectedStation.address}
+                    </p>
+                    <p style={{ fontSize: '0.85rem' }}>
+                        <strong>Status:</strong> {selectedStation.status}
+                    </p>
                 </div>
             )}
 
@@ -79,10 +75,9 @@ export default function MapView() {
                     disableDefaultUI={true}
                     mapId={"DEMO_MAP_ID"}
                 >
-                    {/* THE MARKER LAYER: Passing the selection logic down */}
-                    <StationMarkers 
-                        stations={stations} 
-                        onStationClick={(station) => setSelectedStation(station)} 
+                    <StationMarkers
+                        stations={stations}
+                        onStationClick={(station) => setSelectedStation(station)}
                     />
                 </Map>
             </APIProvider>

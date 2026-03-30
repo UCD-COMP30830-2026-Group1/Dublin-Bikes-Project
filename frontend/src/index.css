@@ -11,3 +11,63 @@ html, body, #root {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   overflow: hidden;
 }
+
+/* ── Map overlay panel: shown when a marker is clicked ── */
+.sidebar-info-window {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 10;
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  width: 280px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.close-btn {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: #666;
+  line-height: 1;
+}
+
+.close-btn:hover {
+  color: #2c3e50;
+}
+
+.stats-container {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.stat-card {
+  flex: 1;
+  border-radius: 8px;
+  padding: 10px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.75rem;
+  color: #666;
+}
+
+.stat-card:first-child {
+  background: #f0fdf4;
+}
+
+.stat-card:last-child {
+  background: #eff6ff;
+}
+
+.stat-card strong {
+  font-size: 1.4rem;
+  color: #2c3e50;
+}
