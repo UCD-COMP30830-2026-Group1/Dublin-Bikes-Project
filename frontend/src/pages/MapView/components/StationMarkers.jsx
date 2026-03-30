@@ -1,60 +1,80 @@
 // src/pages/MapView/components/StationMarkers.jsx
 import React, { useState } from 'react';
-import { AdvancedMarker, Pin, InfoWindow } from '@vis.gl/react-google-maps';
+import { AdvancedMarker, InfoWindow } from '@vis.gl/react-google-maps';
 
-export default function StationMarkers({ stations, onStationClick }) {
+// Custom bike-shaped marker — coloured circle with bike icon
+// Blue ring shown when this station is selected (clicked)
+function BikeMarker({ color, isSelected }) {
+    return (
+        <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            cursor: 'pointer',
+        }}>
+            <div style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '50%',
+                backgroundColor: color,
+                border: isSelected ? '3px solid #1a73e8' : '2px solid rgba(0,0,0,0.25)',
+                boxShadow: isSelected
+                    ? '0 0 0 3px rgba(26,115,232,0.4)'
+                    : '0 2px 6px rgba(0,0,0,0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '18px',
+                transition: 'border 0.15s, box-shadow 0.15s',
+            }}>
+                🚲
+            </div>
+        </div>
+    );
+}
+
+export default function StationMarkers({ stations, selectedStation, onStationClick }) {
     const [hoveredStation, setHoveredStation] = useState(null);
 
-    if (!stations || !Array.isArray(stations)) {
-        console.error("StationMarkers: 'stations' is not an array!", stations);
-        return null;
-    }
+    if (!stations || !Array.isArray(stations)) return null;
 
     const getMarkerColor = (available, total) => {
-        if (available === undefined || available === null) return '#7f8c8d'; // Grey: no data
-        if (available === 0) return '#e74c3c';                               // Red: 0 bikes
+        if (available === undefined || available === null) return '#7f8c8d';
+        if (available === 0) return '#e74c3c';                              // Red
         const percentage = (available / (total || 1)) * 100;
-        if (percentage <= 25) return '#f1c40f';                              // Yellow: >0 up to 25%
-        return '#2ecc71';                                                    // Green: >25%
+        if (percentage <= 25) return '#f39c12';                             // Orange/yellow
+        return '#27ae60';                                                   // Green
     };
 
     return (
         <>
             {stations.map((station) => {
-                // Realtime API returns position as nested { lat, lng } object
                 const lat = station.position?.lat;
                 const lng = station.position?.lng;
-
                 if (!lat || !lng) return null;
 
-                const markerColor = getMarkerColor(station.available_bikes, station.bike_stands);
+                const color = getMarkerColor(station.available_bikes, station.bike_stands);
+                const isSelected = selectedStation?.number === station.number;
 
                 return (
                     <AdvancedMarker
                         key={station.number}
                         position={{ lat, lng }}
                         onClick={() => onStationClick(station)}
+                        zIndex={isSelected ? 99 : 1}
                     >
-                        {/*
-                          * Listeners on the inner <div>, not AdvancedMarker —
-                          * required for reliable hover in @vis.gl/react-google-maps
-                        */}
                         <div
                             onMouseEnter={() => setHoveredStation(station)}
                             onMouseLeave={() => setHoveredStation(null)}
                         >
-                            <Pin
-                                background={markerColor}
-                                borderColor={'#2c3e50'}
-                                glyphColor={'#ffffff'}
-                            />
+                            <BikeMarker color={color} isSelected={isSelected} />
                         </div>
                     </AdvancedMarker>
                 );
             })}
 
-            {/* Single InfoWindow rendered outside the loop */}
-            {hoveredStation && (
+            {/* Hover tooltip — single InfoWindow outside the loop */}
+            {hoveredStation && !selectedStation && (
                 <InfoWindow
                     position={{
                         lat: hoveredStation.position.lat,
