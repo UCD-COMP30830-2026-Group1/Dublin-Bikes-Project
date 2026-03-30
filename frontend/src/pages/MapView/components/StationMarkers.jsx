@@ -2,8 +2,6 @@
 import React, { useState } from 'react';
 import { AdvancedMarker, InfoWindow } from '@vis.gl/react-google-maps';
 
-// Custom bike-shaped marker — coloured circle with bike icon
-// Blue ring shown when this station is selected (clicked)
 function BikeMarker({ color, isSelected }) {
     return (
         <div style={{
@@ -24,10 +22,12 @@ function BikeMarker({ color, isSelected }) {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '18px',
                 transition: 'border 0.15s, box-shadow 0.15s',
             }}>
-                🚲
+                {/* White bike SVG icon */}
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="white">
+                    <path d="M5 20.5A3.5 3.5 0 0 1 1.5 17 3.5 3.5 0 0 1 5 13.5 3.5 3.5 0 0 1 8.5 17 3.5 3.5 0 0 1 5 20.5M5 12a5 5 0 0 0-5 5 5 5 0 0 0 5 5 5 5 0 0 0 5-5 5 5 0 0 0-5-5M14.8 10H19V8.2h-3L13.2 4c-.3-.4-.9-.6-1.4-.6-.6 0-1.1.3-1.4.7L7.3 8.2C7 8.5 6.8 9 6.8 9.5c0 .6.3 1.1.7 1.4L11 13.2V20h2v-8l-2.8-2.2 2.1-2.6 2.5 2.8M19 20.5A3.5 3.5 0 0 1 15.5 17 3.5 3.5 0 0 1 19 13.5 3.5 3.5 0 0 1 22.5 17 3.5 3.5 0 0 1 19 20.5M19 12a5 5 0 0 0-5 5 5 5 0 0 0 5 5 5 5 0 0 0 5-5 5 5 0 0 0-5-5M16 4.8C16 3.8 16.8 3 17.8 3S19.6 3.8 19.6 4.8 18.8 6.6 17.8 6.6 16 5.8 16 4.8z"/>
+                </svg>
             </div>
         </div>
     );
@@ -40,10 +40,10 @@ export default function StationMarkers({ stations, selectedStation, onStationCli
 
     const getMarkerColor = (available, total) => {
         if (available === undefined || available === null) return '#7f8c8d';
-        if (available === 0) return '#e74c3c';                              // Red
+        if (available === 0) return '#e74c3c';
         const percentage = (available / (total || 1)) * 100;
-        if (percentage <= 25) return '#f39c12';                             // Orange/yellow
-        return '#27ae60';                                                   // Green
+        if (percentage <= 25) return '#f39c12';
+        return '#27ae60';
     };
 
     return (
@@ -73,7 +73,6 @@ export default function StationMarkers({ stations, selectedStation, onStationCli
                 );
             })}
 
-            {/* Hover tooltip — single InfoWindow outside the loop */}
             {hoveredStation && !selectedStation && (
                 <InfoWindow
                     position={{
