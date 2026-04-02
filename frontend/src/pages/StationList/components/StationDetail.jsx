@@ -1,5 +1,5 @@
 // src/pages/StationList/components/StationDetail.jsx
-export default function StationDetail({ station, onClose }) {
+export default function StationDetail({ station, onClose ,onMoreInfoClick}) {
     if (!station) return null;
 
     const totalCapacity = station.bike_stands ?? '—';
@@ -82,16 +82,16 @@ export default function StationDetail({ station, onClose }) {
                 ➤ Get Directions
             </button>
 
-            {/* More Information — placeholder */}
+            {/* More Information */}
             <button
-                disabled
+                onClick={() => onMoreInfoClick?.()}
                 style={{
                     width: '100%', padding: '12px', marginBottom: '20px',
                     backgroundColor: '#16a34a', color: 'white',
                     border: 'none', borderRadius: '8px',
-                    fontSize: '0.9rem', fontWeight: '600', cursor: 'not-allowed',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                    opacity: 0.85,
+                    fontSize: '0.9rem', fontWeight: '600', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    gap: '8px', opacity: 1,
                 }}
             >
                 ⓘ More Information
