@@ -5,15 +5,31 @@ import Footer from "./layouts/Footer.jsx";
 import MapView from "./pages/MapView/index.jsx";
 import StationList from "./pages/StationList/index.jsx";
 import StationDetail from "./pages/StationList/components/StationDetail.jsx";
+import MoreInfoModal from "./pages/StationList/components/MoreInfoModal.jsx";
 import Dashboard from "./pages/Dashboard/index.jsx";
 import RoutePlanning from "./pages/RoutePlanning/index.jsx";
 
 function App() {
-    const [viewMode, setViewMode] = useState('stations');
 
+    const [viewMode, setViewMode] = useState('stations');
     // Lifted up so MapView (markers) and sidebar (detail panel) share the same selected station
     const [selectedStation, setSelectedStation] = useState(null);
+    // Controls whether the More Information modal is open
+    const [showMoreInfo, setShowMoreInfo] = useState(false);
 
+    // Close station detail and reset modal state
+    const handleCloseStationDetail = () => {
+        setSelectedStation(null);
+        setShowMoreInfo(false);
+    };
+    // Open More Information modal
+    const handleOpenMoreInfo = () => {
+        setShowMoreInfo(true);
+    };
+    // Close More Information modal
+    const handleCloseMoreInfo = () => {
+        setShowMoreInfo(false);
+    };
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
             <Header viewMode={viewMode} setViewMode={setViewMode} />
@@ -36,7 +52,8 @@ function App() {
                         // Station clicked — show detail panel
                         <StationDetail
                             station={selectedStation}
-                            onClose={() => setSelectedStation(null)}
+                            onClose={handleCloseStationDetail}
+                            onMoreInfoClick={handleOpenMoreInfo}
                         />
                     ) : (
                         // Nothing selected — show station list
@@ -48,11 +65,20 @@ function App() {
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                     <MapView
                         selectedStation={selectedStation}
-                        onStationClick={setSelectedStation}
+                        onStationClick={(station) => {
+                            setSelectedStation(station);
+                            setShowMoreInfo(false);
+                        }}
                     />
                     <Dashboard />
                 </div>
             </div>
+            {showMoreInfo && selectedStation && (
+                <MoreInfoModal
+                    station={selectedStation}
+                    onClose={handleCloseMoreInfo}
+                />
+            )}
 
             <Footer />
         </div>
