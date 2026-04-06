@@ -1,4 +1,4 @@
-export default function AiPredictionCard() {
+export default function AIPredictionCard() {
     return (
         <div
             style={{

@@ -1,7 +1,5 @@
 // src/api/stationService.js
-const API_DOMAIN = import.meta.env.VITE_API_DOMAIN || 'localhost:5000';
-const protocol = API_DOMAIN.includes('localhost') ? 'http' : 'https';
-const API_BASE_URL = `${protocol}://${API_DOMAIN}/api`;
+const API_BASE_URL = '/api';
 
 // Used by StationList or anything that only needs static metadata
 export async function fetchStaticStations() {

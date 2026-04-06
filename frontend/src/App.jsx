@@ -31,13 +31,13 @@ function App() {
         setShowMoreInfo(false);
     };
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' , overflow: 'hidden' }}>
             <Header viewMode={viewMode} setViewMode={setViewMode} />
 
-            <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+            <div style={{ display: 'flex', flex: 1, overflow: 'hidden',minHeight: 0  }}>
                 {/* Left Sidebar */}
                 <aside style={{
-                    width: '320px',
+                    width: '240px',
                     backgroundColor: 'white',
                     boxShadow: '2px 0 5px rgba(0,0,0,0.05)',
                     zIndex: 5,
@@ -62,15 +62,30 @@ function App() {
                 </aside>
 
                 {/* Right content */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                    <MapView
-                        selectedStation={selectedStation}
-                        onStationClick={(station) => {
-                            setSelectedStation(station);
-                            setShowMoreInfo(false);
-                        }}
-                    />
-                    <Dashboard />
+                <div
+                    style={{
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        overflow: 'hidden',
+                        minHeight: 0,
+                    }}
+                >
+                    <div style={{ flex: 2.8, minHeight: 0 }}>
+                        <MapView
+                            selectedStation={selectedStation}
+                            onStationClick={(station) => {
+                                setSelectedStation(station);
+                                setShowMoreInfo(false);
+                            }}
+                        />
+                    </div>
+
+
+
+                    <div style={{ flex: 1.3, minHeight: 0, overflow: 'hidden' }}>
+                        <Dashboard />
+                    </div>
                 </div>
             </div>
             {showMoreInfo && selectedStation && (

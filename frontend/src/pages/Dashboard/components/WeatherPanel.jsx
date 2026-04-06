@@ -11,16 +11,21 @@ export default function WeatherPanel() {
     const hourlyCards = forecast.slice(0, 6);
     const alertMessage = getWeatherAlert(forecast);
 
+
+    // change the weather panel scale
+    const scale = 0.78;
+
     return (
         <section
             style={{
-                height: '280px',
+                height: '210px',
                 backgroundColor: '#f8f9fa',
                 borderTop: '1px solid #ddd',
                 display: 'flex',
                 flexDirection: 'column',
                 flexShrink: 0,
-                zIndex: 4
+                zIndex: 4,
+                overflow: 'hidden'
             }}
         >
             <WeatherAlert message={alertMessage} />
@@ -28,37 +33,48 @@ export default function WeatherPanel() {
             <div
                 style={{
                     flex: 1,
-                    padding: '16px 20px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '16px'
+                    overflow: 'hidden',
+                    position: 'relative'
                 }}
             >
-                {loading ? (
-                    <div style={{ color: '#6c757d' }}>Loading weather forecast...</div>
-                ) : error ? (
-                    <div style={{ color: '#dc3545' }}>{error}</div>
-                ) : (
-                    <>
-                        <CurrentWeather current={current} location={location} />
+                <div
+                    style={{
+                        transform: `scale(${scale})`,
+                        transformOrigin: 'top left',
+                        width: `${100 / scale}%`,
+                        padding: '10px 12px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '10px',
+                        boxSizing: 'border-box'
+                    }}
+                >
+                    {loading ? (
+                        <div style={{ color: '#6c757d' }}>Loading weather forecast...</div>
+                    ) : error ? (
+                        <div style={{ color: '#dc3545' }}>{error}</div>
+                    ) : (
+                        <>
+                            <CurrentWeather current={current} location={location} />
 
-                        <div
-                            style={{
-                                display: 'grid',
-                                gridTemplateColumns: 'repeat(6, 1fr)',
-                                gap: '12px'
-                            }}
-                        >
-                            {hourlyCards.map((item, index) => (
-                                <ForecastCard
-                                    key={item.time || index}
-                                    item={item}
-                                    isNow={index === 0}
-                                />
-                            ))}
-                        </div>
-                    </>
-                )}
+                            <div
+                                style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(6, 1fr)',
+                                    gap: '8px'
+                                }}
+                            >
+                                {hourlyCards.map((item, index) => (
+                                    <ForecastCard
+                                        key={item.time || index}
+                                        item={item}
+                                        isNow={index === 0}
+                                    />
+                                ))}
+                            </div>
+                        </>
+                    )}
+                </div>
             </div>
         </section>
     );

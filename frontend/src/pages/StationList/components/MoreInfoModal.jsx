@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import AiPredictionCard from './AiPredictionCard';
+import AIPredictionCard from './AIPredictionCard';
 import UsageInsightsCard from './UsageInsightsCard';
 import HourlyDailyToggle from './HourlyDailyToggle';
 import OccupancyChartCard from './OccupancyChartCard';
@@ -133,7 +133,7 @@ export default function MoreInfoModal({ station, onClose }) {
                 </div>
 
                 <div style={{ marginBottom: '24px' }}>
-                    <AiPredictionCard />
+                    <AIPredictionCard />
                 </div>
 
                 <div style={{ marginBottom: '24px' }}>
