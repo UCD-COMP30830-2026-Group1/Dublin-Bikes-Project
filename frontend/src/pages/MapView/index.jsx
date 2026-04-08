@@ -39,6 +39,10 @@ export default function MapView({ selectedStation, onStationClick }) {
                 <Map
                     defaultCenter={DUBLIN_CENTER}
                     defaultZoom={13}
+                    zoomControl={true}
+                    zoomControlOptions={{position:3}}
+                    fullscreenControl={true}
+                    fullscreenControlOptions={{ position: 5 }}
                     gestureHandling={'greedy'}
                     disableDefaultUI={true}
                     mapId={"DEMO_MAP_ID"}
