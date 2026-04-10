@@ -4,47 +4,85 @@ import Header from "./layouts/Header.jsx";
 import Footer from "./layouts/Footer.jsx";
 import MapView from "./pages/MapView/index.jsx";
 import StationList from "./pages/StationList/index.jsx";
+import StationDetail from "./pages/StationList/components/StationDetail.jsx";
+import MoreInfoModal from "./pages/StationList/components/MoreInfoModal.jsx";
 import Dashboard from "./pages/Dashboard/index.jsx";
 import RoutePlanning from "./pages/RoutePlanning/index.jsx";
 
 function App() {
-    //1. Defined the view mode：'stations'(stations information) or 'routes'(route planning)
-    const [viewMode, setViewMode] = useState('stations');
 
-    return (<div style={{display: 'flex', flexDirection: 'column', height: '100vh'}}>
-            {/* 1. Header*/}
-            <Header viewMode={viewMode} setViewMode={setViewMode}/>
-            {/* 2. Body Container: station details */}
-            <div style={{display: 'flex', flex: 1, overflow: 'hidden'}}>
-                {/* 2A. Left Sidebar: StationList mode/ Route Planning mode*/}
+    const [viewMode, setViewMode] = useState('stations');
+    // Lifted up so MapView (markers) and sidebar (detail panel) share the same selected station
+    const [selectedStation, setSelectedStation] = useState(null);
+    // Controls whether the More Information modal is open
+    const [showMoreInfo, setShowMoreInfo] = useState(false);
+
+    // Close station detail and reset modal state
+    const handleCloseStationDetail = () => {
+        setSelectedStation(null);
+        setShowMoreInfo(false);
+    };
+    // Open More Information modal
+    const handleOpenMoreInfo = () => {
+        setShowMoreInfo(true);
+    };
+    // Close More Information modal
+    const handleCloseMoreInfo = () => {
+        setShowMoreInfo(false);
+    };
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+            <Header viewMode={viewMode} setViewMode={setViewMode} />
+
+            <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+                {/* Left Sidebar */}
                 <aside style={{
-                  width: '320px',
-                  backgroundColor: 'white',
-                  boxShadow: '2px 0 5px rgba(0,0,0,0.05)',
-                  zIndex: 5,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  padding: '20px'
+                    width: '320px',
+                    backgroundColor: 'white',
+                    boxShadow: '2px 0 5px rgba(0,0,0,0.05)',
+                    zIndex: 5,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    padding: '20px',
+                    overflowY: 'auto',
                 }}>
-                  {viewMode === 'stations' ? <StationList /> : <RoutePlanning />}
+                    {viewMode === 'routes' ? (
+                        <RoutePlanning />
+                    ) : selectedStation ? (
+                        // Station clicked — show detail panel
+                        <StationDetail
+                            station={selectedStation}
+                            onClose={handleCloseStationDetail}
+                            onMoreInfoClick={handleOpenMoreInfo}
+                        />
+                    ) : (
+                        // Nothing selected — show station list
+                        <StationList />
+                    )}
                 </aside>
 
-                {/* 2B. Right Content Area*/}
-                <div style={{flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden'}}>
-
-                    {/* Upper right area：Map area */}
-                    <MapView/>
-
-                    {/* Bottom right area：weather */}
-                    <Dashboard/>
-
+                {/* Right content */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                    <MapView
+                        selectedStation={selectedStation}
+                        onStationClick={(station) => {
+                            setSelectedStation(station);
+                            setShowMoreInfo(false);
+                        }}
+                    />
+                    <Dashboard />
                 </div>
-
             </div>
-            {/* Global Footer: Copyright and tools declaration *//* Global Footer: Copyright and tools declaration */}
-            <Footer/>
+            {showMoreInfo && selectedStation && (
+                <MoreInfoModal
+                    station={selectedStation}
+                    onClose={handleCloseMoreInfo}
+                />
+            )}
 
-        </div>);
+            <Footer />
+        </div>
+    );
 }
 
 export default App;
