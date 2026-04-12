@@ -31,13 +31,13 @@ services:
     environment:
       - TZ=Europe/Dublin
 
-  # 3. Dynamic weather data scraping
+  # 3. backend: flask/gunicorn/gevent
   flask-backend:
     build: .
     container_name: dublin-bikes-api
     restart: always
-    ports:
-      - "80:5000" # External network port 80 corresponds to port 5000 inside the container, bypassing campus network blocking.
+    expose:
+      - "5000"
     deploy:
       resources:
         limits:
@@ -50,3 +50,17 @@ services:
     environment:
       - TZ=Europe/Dublin
       - FLASK_ENV=production
+
+  #4. frontend - nginx
+  frontend:
+    build: ./frontend
+    container_name: dublin-bikes-front
+    restart: always
+    ports:
+      - "80:80"
+    deploy:
+      resources:
+        limits:
+          memory: 100M
+    depends_on:
+      - flask-backend
