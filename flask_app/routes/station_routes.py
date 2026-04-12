@@ -4,7 +4,7 @@ import requests
 from flask import Blueprint, request
 from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker
-
+from common.extensions import cache
 import dbinfo
 from common.api_response import ApiResponse
 from common.models import Station, Availability
@@ -16,6 +16,7 @@ Session = sessionmaker(bind=engine)
 
 
 @station_bp.route('/realtime')
+@cache.cached(timeout=60) #caching for 1 minute
 def get_realtime_stations():
     try:
         url = "https://api.jcdecaux.com/vls/v1/stations"
@@ -29,6 +30,7 @@ def get_realtime_stations():
 
 
 @station_bp.route('/static', methods=["GET"])
+@cache.cached(timeout=3600) #caching for 1 hour to reduce the database load
 def get_static_stations():
     session = Session()
     try:
@@ -55,6 +57,7 @@ def get_static_stations():
 # This is what the frontend MapView should call.
 # Modification: cut down the time & space complexity from O(N^2) -> O(N)
 @station_bp.route('/live', methods=["GET"])
+@cache.cached(timeout=60)
 def get_live_stations():
     session = Session()
     try:
@@ -105,8 +108,8 @@ def get_live_stations():
     finally:
         session.close()
 
-
 @station_bp.route('/historical', methods=["GET"])
+@cache.cached(timeout=300, query_string=True)
 def get_historical_availability():
     session = Session()
     try:

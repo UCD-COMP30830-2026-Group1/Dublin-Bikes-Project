@@ -4,6 +4,7 @@ import dbinfo
 from datetime import datetime,timezone
 
 from common.api_response import ApiResponse
+from common.extensions import cache
 
 # Delete "app = Flask(__name__)" and replace with weather_bp
 weather_bp = Blueprint('weather', __name__,url_prefix='/api/weather')
@@ -12,10 +13,15 @@ weather_bp = Blueprint('weather', __name__,url_prefix='/api/weather')
 LAT = 53.3498
 LON = -6.2603
 
+# TODO: Refactor these weather endpoints to fetch data from our local V2 database
+# (Single Source of Truth) instead of external API calls.
+# This will improve latency, avoid API rate limits, and ensure consistency
+# with the background scrapers. Discuss with the team before migration.
 
 ### get current weather
 # @app.route("/api/weather/current")
 @weather_bp.route("/current")
+@cache.cached(timeout=300) #Cache for 5 minutes to prevent exceeding the weather API quota.
 def get_weather():
     try:
         r = requests.get(
@@ -62,6 +68,7 @@ def get_weather():
 ### get 24hours weather data
 # @app.route("/api/weather/24h")
 @weather_bp.route("/forecast")
+@cache.cached(timeout=3000)
 def get_weather_24hours():
 
     try:
