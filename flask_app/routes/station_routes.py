@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta
+
 import requests
 from flask import Blueprint, request
 from sqlalchemy import create_engine, func
@@ -51,37 +53,34 @@ def get_static_stations():
 
 # NEW: Merges Station (static) + latest Availability (live) into one response.
 # This is what the frontend MapView should call.
+# Modification: cut down the time & space complexity from O(N^2) -> O(N)
 @station_bp.route('/live', methods=["GET"])
 def get_live_stations():
     session = Session()
     try:
         # Step 1: Get the most recent last_update timestamp per station number
-        latest_subquery = (
-            session.query(
-                Availability.number,
-                func.max(Availability.last_update).label("max_update")
-            )
-            .group_by(Availability.number)
-            .subquery()
-        )
+        # Modified step1: Query all the static stations(115 stations->only 115)
+        stations = session.query(Station).all()
 
         # Step 2: Join Station + latest Availability row
-        results = (
-            session.query(Station, Availability)
-            .outerjoin(
-                Availability,
-                (Station.number == Availability.number) &
-                (Availability.last_update == latest_subquery.c.max_update)
-            )
-            .outerjoin(
-                latest_subquery,
-                Station.number == latest_subquery.c.number
-            )
-            .all()
-        )
+        # Modified step2: Only query dynamic data within the past 15 minutes,
+        # avoiding full table scans, space consuming= 115 stations * 3 times=345 (worst case)
+        fifteen_minutes_ago = datetime.now() - timedelta(minutes=15)
+        recent_avails = session.query(Availability).filter(
+            Availability.last_update >= fifteen_minutes_ago
+        ).order_by(Availability.last_update.desc()).all()
 
+        # Modified step3: Build a dictionary mapping in memory
+        avail_dict={}
+        for avail in recent_avails:
+            if avail.number not in avail_dict:
+                avail_dict[avail.number] = avail #Because recent_avails are sorted in descending order of last update time,
+
+        # Modified step4: compose the results
         station_list = []
-        for station, avail in results:
+        for station in stations:
+            # dictionary query -> time complexity: O(1)
+            avail = avail_dict.get(station.number)
             station_list.append({
                 'number': station.number,
                 'name': station.name,
