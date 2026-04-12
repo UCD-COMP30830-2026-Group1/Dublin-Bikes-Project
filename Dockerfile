@@ -23,4 +23,4 @@ COPY . .
 ENV PYTHONUNBUFFERED=1
 
 # 7. Default command (scraper script part will be overridden by docker-compose)
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "run:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "-k", "gevent", "run:app"]
