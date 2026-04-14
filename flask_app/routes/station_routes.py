@@ -4,7 +4,7 @@ from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker
 import dbinfo
 from common.api_response import ApiResponse
-from common.models import Station, Availability
+from common.models import Station, Availability, WeatherCurrent
 import os
 import json
 import joblib
