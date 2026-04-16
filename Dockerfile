@@ -22,5 +22,5 @@ COPY . .
 # 6. Set environment variables to ensure Python output is printed directly to the log and not cached.
 ENV PYTHONUNBUFFERED=1
 
-# 7. Default command (scraper script part will be overridden by docker-compose)
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "-k", "gevent", "run:app"]
+# 7. Optimized Gunicorn startup for Mixed Workload (I/O + ML Inference)
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "--threads", "4", "--preload", "--timeout", "60", "run:app"]

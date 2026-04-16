@@ -14,7 +14,7 @@ https://developer.jcdecaux.com/#/account
 
 ![image-20260206220940867](/Users/yanggao/Library/Application Support/typora-user-images/image-20260206220940867.png)
 
-API_KEY = "6d3fcc7d88739f903d465329ceb1e401c99e2a0e"
+API_KEY = ""
 
 
 
@@ -38,7 +38,7 @@ Create dbinfo.py file (following the L4 instructions )
 ```
 
 ####api 
-JCKEY = '6d3fcc7d88739f903d465329ceb1e401c99e2a0e'
+JCKEY = ''
 ### bike location 
 NAME = 'dublin'
 ### url
