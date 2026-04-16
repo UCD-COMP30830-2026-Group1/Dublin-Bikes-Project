@@ -2,7 +2,7 @@ from flask import Flask, jsonify, Blueprint
 import requests
 import dbinfo
 from datetime import datetime,timezone
-
+from common.database import SessionLocal
 from common.api_response import ApiResponse
 from common.extensions import cache
 
