@@ -9,7 +9,7 @@ services:
       resources:
         limits:
           memory: 200M  # Prevent resource exhaustion on the EC2 instance
-          cpus: '0.40'
+          cpus: '0.10'
     volumes:
       - ./dbinfo.py:/app/dbinfo.py  # Inject database credentials securely from the host
     environment:
@@ -25,24 +25,24 @@ services:
       resources:
         limits:
           memory: 200M
-          cpus: '0.40'
+          cpus: '0.10'
     volumes:
       - ./dbinfo.py:/app/dbinfo.py
     environment:
       - TZ=Europe/Dublin
 
-  # 3. Dynamic weather data scraping
+  # 3. backend: flask/gunicorn/gevent
   flask-backend:
     build: .
     container_name: dublin-bikes-api
     restart: always
-    ports:
-      - "80:5000" # External network port 80 corresponds to port 5000 inside the container, bypassing campus network blocking.
+    expose:
+      - "5000"
     deploy:
       resources:
         limits:
-          memory: 500M  # Higher memory limit to handle concurrent API requests
-          cpus: '0.60'
+          memory: 700M  # Higher memory limit to handle concurrent API requests
+          cpus: '0.80'
     volumes:
       - ./dbinfo.py:/app/dbinfo.py
     env_file:
@@ -50,3 +50,17 @@ services:
     environment:
       - TZ=Europe/Dublin
       - FLASK_ENV=production
+
+  #4. frontend - nginx
+  frontend:
+    build: ./frontend
+    container_name: dublin-bikes-front
+    restart: always
+    ports:
+      - "80:80"
+    deploy:
+      resources:
+        limits:
+          memory: 100M
+    depends_on:
+      - flask-backend
