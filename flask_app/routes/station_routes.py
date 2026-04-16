@@ -1,35 +1,39 @@
-import requests
-from flask import Blueprint, request
-from sqlalchemy import create_engine, func
-from sqlalchemy.orm import sessionmaker
-import dbinfo
-from common.api_response import ApiResponse
-from common.models import Station, Availability, WeatherCurrent
+import os
+
 import os
 import json
 import joblib
+import requests
 import numpy as np
 import pandas as pd
-from flask_app.ml.feature_engineering import FEATURE_COLUMNS, build_features
+from datetime import datetime, timedelta
+from flask import Blueprint, request
 
+import dbinfo
+from common.api_response import ApiResponse
+from common.extensions import cache
+from common.models import Station, Availability, WeatherCurrent
+from common.database import SessionLocal
+from flask_app.ml.feature_engineering import FEATURE_COLUMNS, build_features
 
 station_bp = Blueprint('station', __name__, url_prefix="/api/stations")
 
-engine = create_engine(dbinfo.URI_ML)
-Session = sessionmaker(bind=engine)
-
-_ML_DIR       = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "ml")
-_MODEL_PATH   = os.path.join(_ML_DIR, "model.pkl")
+_ML_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "ml")
+_MODEL_PATH = os.path.join(_ML_DIR, "model.pkl")
 _METRICS_PATH = os.path.join(_ML_DIR, "metrics.json")
- 
+
+# ── ML Model Initialization ───────────────────────────────────────────
 def _load_model():
     if not os.path.exists(_MODEL_PATH):
         return None
     return joblib.load(_MODEL_PATH)
- 
+
+
 _model = _load_model()
 
+# ── API Routes ────────────────────────────────────────────────────────
 @station_bp.route('/realtime')
+@cache.cached(timeout=60)  # caching for 1 minute
 def get_realtime_stations():
     try:
         url = "https://api.jcdecaux.com/vls/v1/stations"
@@ -43,8 +47,9 @@ def get_realtime_stations():
 
 
 @station_bp.route('/static', methods=["GET"])
+@cache.cached(timeout=3600)  # caching for 1 hour to reduce the database load
 def get_static_stations():
-    session = Session()
+    session = SessionLocal()
     try:
         stations = session.query(Station).all()
         station_list = []
@@ -67,37 +72,36 @@ def get_static_stations():
 
 # NEW: Merges Station (static) + latest Availability (live) into one response.
 # This is what the frontend MapView should call.
+# Modification: cut down the time & space complexity from O(N^2) -> O(N)
 @station_bp.route('/live', methods=["GET"])
+@cache.cached(timeout=60)
 def get_live_stations():
-    session = Session()
+    session = SessionLocal()
     try:
         # Step 1: Get the most recent last_update timestamp per station number
-        latest_subquery = (
-            session.query(
-                Availability.number,
-                func.max(Availability.last_update).label("max_update")
-            )
-            .group_by(Availability.number)
-            .subquery()
-        )
+        # Modified step1: Query all the static stations(115 stations->only 115)
+        stations = session.query(Station).all()
 
         # Step 2: Join Station + latest Availability row
-        results = (
-            session.query(Station, Availability)
-            .outerjoin(
-                Availability,
-                (Station.number == Availability.number) &
-                (Availability.last_update == latest_subquery.c.max_update)
-            )
-            .outerjoin(
-                latest_subquery,
-                Station.number == latest_subquery.c.number
-            )
-            .all()
-        )
+        # Modified step2: Only query dynamic data within the past 15 minutes,
+        # avoiding full table scans, space consuming= 115 stations * 3 times=345 (worst case)
+        fifteen_minutes_ago = datetime.now() - timedelta(minutes=15)
+        recent_avails = session.query(Availability).filter(
+            Availability.last_update >= fifteen_minutes_ago
+        ).order_by(Availability.last_update.desc()).all()
 
+        # Modified step3: Build a dictionary mapping in memory
+        avail_dict = {}
+        for avail in recent_avails:
+            if avail.number not in avail_dict:
+                avail_dict[
+                    avail.number] = avail  # Because recent_avails are sorted in descending order of last update time,
+
+        # Modified step4: compose the results
         station_list = []
-        for station, avail in results:
+        for station in stations:
+            # dictionary query -> time complexity: O(1)
+            avail = avail_dict.get(station.number)
             station_list.append({
                 'number': station.number,
                 'name': station.name,
@@ -122,10 +126,10 @@ def get_live_stations():
     finally:
         session.close()
 
-
 @station_bp.route('/historical', methods=["GET"])
+@cache.cached(timeout=300, query_string=True)
 def get_historical_availability():
-    session = Session()
+    session = SessionLocal()
     try:
         station_number = request.args.get("number")
         query = session.query(Availability)
@@ -159,41 +163,6 @@ def get_historical_availability():
     finally:
         session.close()
 
-# ─────────────────────────────────────────────────────────────────
-# HOW TO ADD THE PREDICT ENDPOINT TO station_routes.py
-# Make exactly 3 edits as described below.
-# ─────────────────────────────────────────────────────────────────
-
-# ══ EDIT A ═══════════════════════════════════════════════════════
-# Add these imports at the TOP of station_routes.py,
-# after your existing import block:
-
-import os
-import json
-import joblib
-import numpy as np
-import pandas as pd
-from flask_app.ml.feature_engineering import FEATURE_COLUMNS, build_features
-
-# ══ EDIT B ═══════════════════════════════════════════════════════
-# Add this model loader block immediately AFTER the line:
-#   Session = sessionmaker(bind=engine)
-
-_ML_DIR      = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "ml")
-_MODEL_PATH  = os.path.join(_ML_DIR, "model.pkl")
-_METRICS_PATH = os.path.join(_ML_DIR, "metrics.json")
-
-def _load_model():
-    """Load model once at Flask startup. Returns None if not yet trained."""
-    if not os.path.exists(_MODEL_PATH):
-        return None
-    return joblib.load(_MODEL_PATH)
-
-_model = _load_model()
-
-
-# ══ EDIT C ═══════════════════════════════════════════════════════
-# Paste this entire function at the BOTTOM of station_routes.py:
 
 @station_bp.route('/predict', methods=["GET"])
 def predict_availability():
@@ -238,7 +207,7 @@ def predict_availability():
             "ML model not found — run flask_app/ml/train_model.py first.", 503
         )
 
-    session = Session()
+    session = SessionLocal()
     try:
         # ── 1. Station static info (bike_stands = total capacity) ──
         station = session.query(Station).filter_by(number=station_number).first()
@@ -267,31 +236,31 @@ def predict_availability():
 
         # ── 4. Build feature row matching training schema ──────────
         row = {
-            "number":          station_number,
-            "last_update":     latest_avail.last_update,
+            "number": station_number,
+            "last_update": latest_avail.last_update,
             "available_bikes": latest_avail.available_bikes,
-            "bike_stands":     station.bike_stands,
+            "bike_stands": station.bike_stands,
             # weather fields — use sensible Dublin defaults if no weather row
-            "temp":       (latest_weather.temp        if latest_weather else 10.0),
-            "humidity":   (latest_weather.humidity    if latest_weather else 75),
-            "pressure":   (latest_weather.pressure    if latest_weather else 1013),
-            "wind_speed": (latest_weather.wind_speed  if latest_weather else 5.0),
-            "rain_1h":    (latest_weather.rain_1h     if latest_weather and latest_weather.rain_1h else 0.0),
+            "temp": (latest_weather.temp if latest_weather else 10.0),
+            "humidity": (latest_weather.humidity if latest_weather else 75),
+            "pressure": (latest_weather.pressure if latest_weather else 1013),
+            "wind_speed": (latest_weather.wind_speed if latest_weather else 5.0),
+            "rain_1h": (latest_weather.rain_1h if latest_weather and latest_weather.rain_1h else 0.0),
         }
 
         df = pd.DataFrame([row])
         df = build_features(df)
-        X  = df[FEATURE_COLUMNS]
+        X = df[FEATURE_COLUMNS]
 
         # ── 5. Predict with confidence from tree spread ────────────
         # Each tree gives an independent prediction.
         # Low spread between trees = high confidence.
         tree_preds = np.array([tree.predict(X)[0] for tree in _model.estimators_])
-        predicted  = float(np.mean(tree_preds))
-        std_dev    = float(np.std(tree_preds))
+        predicted = float(np.mean(tree_preds))
+        std_dev = float(np.std(tree_preds))
 
         # Normalise: std_dev 0 → 1.0 confidence, std_dev ≥ 8 → 0.0
-        confidence      = round(float(np.clip(1.0 - (std_dev / 8.0), 0.0, 1.0)), 2)
+        confidence = round(float(np.clip(1.0 - (std_dev / 8.0), 0.0, 1.0)), 2)
         predicted_bikes = int(round(np.clip(predicted, 0, station.bike_stands)))
 
         # ── 6. Attach training metrics for UI display ──────────────
@@ -301,14 +270,14 @@ def predict_availability():
                 model_info = json.load(f)
 
         return ApiResponse.ok(data={
-            "station_number":  station_number,
+            "station_number": station_number,
             "predicted_bikes": predicted_bikes,
-            "confidence":      confidence,
+            "confidence": confidence,
             "horizon_minutes": 30,
-            "low_confidence":  confidence < 0.60,
-            "model_rmse":      model_info.get("rmse"),
-            "model_r2":        model_info.get("r2"),
-            "trained_at":      model_info.get("trained_at"),
+            "low_confidence": confidence < 0.60,
+            "model_rmse": model_info.get("rmse"),
+            "model_r2": model_info.get("r2"),
+            "trained_at": model_info.get("trained_at"),
         }, message=f"Prediction for station {station_number}")
 
     except Exception as e:

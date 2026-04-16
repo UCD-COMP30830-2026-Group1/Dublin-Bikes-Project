@@ -1,9 +1,10 @@
 from flask import Flask, jsonify, Blueprint
-import requests
-import dbinfo
 from datetime import datetime,timezone
-
+from common.database import SessionLocal
 from common.api_response import ApiResponse
+from common.extensions import cache
+from common.models import WeatherCurrent, WeatherHourly
+import dbinfo
 
 # Delete "app = Flask(__name__)" and replace with weather_bp
 weather_bp = Blueprint('weather', __name__,url_prefix='/api/weather')
@@ -12,30 +13,24 @@ weather_bp = Blueprint('weather', __name__,url_prefix='/api/weather')
 LAT = 53.3498
 LON = -6.2603
 
+# TODO: Refactor these weather endpoints to fetch data from our local V2 database
+# (Single Source of Truth) instead of external API calls.
+# This will improve latency, avoid API rate limits, and ensure consistency
+# with the background scrapers. Discuss with the team before migration.
 
 ### get current weather
 # @app.route("/api/weather/current")
 @weather_bp.route("/current")
+@cache.cached(timeout=300) #Cache for 5 minutes to prevent exceeding the weather API quota.
 def get_weather():
+    session = SessionLocal()
     try:
-        r = requests.get(
-            dbinfo.WEATHER_URI,
-            params={
-                "lat": LAT,
-                "lon": LON,
-                "appid": dbinfo.WEATHER_KEY,
-                "units": "metric",
-                "exclude": "minutely,hourly,daily,alerts",
-            },
-            timeout=30,
-        )
-
-        r.raise_for_status()
-        data = r.json()
+        current = session.query(WeatherCurrent).order_by(WeatherCurrent.dt.desc()).first()
+        if not current:
+            return ApiResponse.error(message="No current weather data in database.", code=404)
 
         now = datetime.now(timezone.utc)
 
-        current = data.get("current", {})
 
         record = {
             "record_id": now.strftime("%Y%m%d%H%M%S"),
@@ -44,51 +39,52 @@ def get_weather():
                 "lat": LAT,
                 "lon": LON,
             },
-            "timestamp": now.isoformat(),
+            "timestamp": current.dt.isoformat() if hasattr(current.dt, 'isoformat') else current.dt,
             "weather_data": {
-                "temp": current.get("temp"),
-                "humidity": current.get("humidity"),
-                "wind_speed": current.get("wind_speed"),
-                "rain": current.get("rain", {}).get("1h", 0.0),
-                "snow": current.get("snow", {}).get("1h", 0.0),
+                "temp": current.temp,
+                "humidity": current.humidity,
+                "wind_speed": current.wind_speed,
+                "rain": getattr(current, 'rain_1h', 0.0),
+                "snow": getattr(current, 'snow_1h', 0.0),
             },
         }
 
         return ApiResponse.ok(record,"Current weather fetched successfully.")
     except Exception as e:
-        return ApiResponse.error(message=str(e))
-
+        return ApiResponse.error(message=f"Database query error: {str(e)}")
+    finally:
+        session.close()
 
 ### get 24hours weather data
 # @app.route("/api/weather/24h")
 @weather_bp.route("/forecast")
+@cache.cached(timeout=3000)
 def get_weather_24hours():
-
+    session = SessionLocal()
     try:
-        r = requests.get(dbinfo.WEATHER_URI, params={
-            "lat": LAT,
-            "lon": LON,
-            "appid": dbinfo.WEATHER_KEY,
-            "units": "metric",
-            "exclude": "current,minutely,daily,alerts"
-        }, timeout=30)
-
-        r.raise_for_status()
-        data = r.json()
-
         now = datetime.now(timezone.utc)
+
+        upcoming_forecasts=(
+            session.query(WeatherHourly)
+            .filter(WeatherHourly.dt>=now)
+            .order_by(WeatherHourly.dt.asc())
+            .limit(24)
+            .all()
+        )
+        if not upcoming_forecasts:
+            return ApiResponse.error(message="No forecast data in database.", code=404)
 
         hourly_data = []
 
         # get24 hours data
-        for hour in data.get("hourly", [])[:24]:
+        for hour in upcoming_forecasts:
             hourly_record = {
-                "time": datetime.fromtimestamp(hour["dt"], timezone.utc).isoformat(),
-                "temp": hour.get("temp"),
-                "humidity": hour.get("humidity"),
-                "wind_speed": hour.get("wind_speed"),
-                "rain": hour.get("rain", {}).get("1h", 0.0),
-                "snow": hour.get("snow", {}).get("1h", 0.0)
+                "time": hour.dt.isoformat() if hasattr(hour.dt, 'isoformat') else hour.dt,
+                "temp": hour.temp,
+                "humidity": hour.humidity,
+                "wind_speed": hour.wind_speed,
+                "rain": getattr(hour, 'rain_1h', 0.0),
+                "snow": getattr(hour, 'snow_1h', 0.0)
             }
             hourly_data.append(hourly_record)
 
@@ -104,4 +100,6 @@ def get_weather_24hours():
 
         return ApiResponse.ok(response,"24h weather forecast fetched successfully")
     except Exception as e:
-        return ApiResponse.error(message=str(e))
+        return ApiResponse.error(message=f"Database query error: {str(e)}")
+    finally:
+        session.close()

@@ -24,6 +24,24 @@ def create_databases():
         print(f"Creating the 2-day database")
         conn.execute(text(f"CREATE DATABASE IF NOT EXISTS {dbinfo.DB_NAME_2DAY}"))
 
+        # start the scheduler
+        print("Enabling MySQL Event Scheduler...")
+        conn.execute(text("SET GLOBAL event_scheduler = ON;"))
+        print(f"Switching to database: {dbinfo.DB_NAME_ML}")
+        conn.execute(text(f"USE {dbinfo.DB_NAME_ML}"))
+
+        # Deploy a 7-day cleanup task
+        print("Deploying 7-day data retention event...")
+        cleanup_sql = """
+                CREATE EVENT IF NOT EXISTS clean_7day_bikes
+                ON SCHEDULE EVERY 1 DAY
+                STARTS CURRENT_TIMESTAMP
+                DO
+                  DELETE FROM availability 
+                  WHERE last_update < (NOW() - INTERVAL 7 DAY);
+                """
+        conn.execute(text(cleanup_sql))
+
         print("\n Current Databases on Server:")
         for res in conn.execute(text("SHOW DATABASES")):
             print(res)
