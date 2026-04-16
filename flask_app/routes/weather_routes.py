@@ -13,11 +13,6 @@ weather_bp = Blueprint('weather', __name__,url_prefix='/api/weather')
 LAT = 53.3498
 LON = -6.2603
 
-# TODO: Refactor these weather endpoints to fetch data from our local V2 database
-# (Single Source of Truth) instead of external API calls.
-# This will improve latency, avoid API rate limits, and ensure consistency
-# with the background scrapers. Discuss with the team before migration.
-
 ### get current weather
 # @app.route("/api/weather/current")
 @weather_bp.route("/current")
