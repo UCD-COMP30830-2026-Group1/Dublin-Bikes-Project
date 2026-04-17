@@ -1,3 +1,4 @@
+// src/api/routePlanningService.js
 export async function planBikeJourney(payload) {
     const response = await fetch('/api/routes/plan', {
         method: 'POST',
