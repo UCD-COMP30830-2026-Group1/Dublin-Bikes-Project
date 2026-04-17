@@ -11,7 +11,8 @@ export default function CurrentWeather({ current, location }) {
             style={{
                 display: 'flex',
                 justifyContent: 'space-between',
-                alignItems: 'center'
+                alignItems: 'center',
+                width:'100%'
             }}
         >
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
@@ -43,15 +44,27 @@ export default function CurrentWeather({ current, location }) {
                     </div>
                 </div>
             </div>
-
-            <div
-                style={{
-                    fontSize: '1rem',
-                    color: '#495057',
-                    fontWeight: 500
-                }}
-            >
-                🌬 {formatWind(current?.wind_speed)}
+            <div style={{ textAlign: 'right' }}>
+                <div
+                    style={{
+                        color: '#15803d', // 绿色加粗
+                        fontSize: '1.4rem',
+                        fontWeight: 600,
+                        lineHeight: 1
+                    }}
+                >
+                   {formatWind(current?.wind_speed)}
+                </div>
+                <div
+                    style={{
+                        fontSize: '0.85rem',
+                        color: '#6c757d',
+                        fontWeight: 400,
+                        marginTop: '4px'
+                    }}
+                >
+                    Wind speed
+                </div>
             </div>
         </div>
     );

@@ -7,7 +7,7 @@ export function formatHour(timeString) {
     if (!timeString) return '--';
 
     const date = new Date(timeString);
-    return date.toLocaleTimeString([], {
+    return date.toLocaleTimeString('en-IE', {
         hour: 'numeric',
         hour12: true
     });
