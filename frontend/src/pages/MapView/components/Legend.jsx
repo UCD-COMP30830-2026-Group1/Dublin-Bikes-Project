@@ -1,22 +1,32 @@
 // src/pages/MapView/components/Legend.jsx
 export default function Legend() {
     return (
-        <div style={{
+         <div style={{
             position: 'absolute',
             bottom: '30px',
             right: '20px',
             backgroundColor: 'white',
-            padding: '12px 18px',
-            borderRadius: '8px',
-            boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
-            zIndex: 5
+            padding: '10px 16px',
+            borderRadius: '20px',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+            zIndex: 5,
+            display: 'flex',
+            gap: '16px',
+            fontSize: '0.85rem',
+            color: '#4b5563',
+            fontWeight: 500
         }}>
-            <h4 style={{margin: '0 0 12px 0', fontSize: '0.9rem'}}>Status</h4>
-            <div style={{fontSize: '0.8rem', display: 'flex', flexDirection: 'column', gap: '8px'}}>
-                <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}><span>🟢</span><span>Available</span>
-                </div>
-                <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}><span>🟡</span><span>Low</span></div>
-                <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}><span>🔴</span><span>Empty</span></div>
+            <div style={{display: 'flex', alignItems: 'center', gap: '6px'}}>
+                <span style={{display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#22c55e'}}></span>
+                <span>Available</span>
+            </div>
+            <div style={{display: 'flex', alignItems: 'center', gap: '6px'}}>
+                <span style={{display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#f59e0b'}}></span>
+                <span>Low</span>
+            </div>
+            <div style={{display: 'flex', alignItems: 'center', gap: '6px'}}>
+                <span style={{display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#ef4444'}}></span>
+                <span>Empty</span>
             </div>
         </div>
     );
