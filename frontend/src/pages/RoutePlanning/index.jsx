@@ -12,14 +12,27 @@ function StationCard({
     indexLabel,
     onSelectStation,
     badgeColor = '#15803d',
-    isActive = false
+    isActive = false,
+    onMouseEnter,
+    onMouseLeave
 }) {
+    const [isHovered, setIsHovered] = useState(false);
     return (
         <div
             onClick={() => onSelectStation?.(station)}
+            onMouseEnter={(e) => {
+                setIsHovered(true);
+                if (onMouseEnter) onMouseEnter(e);
+            }}
+            onMouseLeave={(e) => {
+                setIsHovered(false);
+                if (onMouseLeave) onMouseLeave(e);
+            }}
             style={{
-                background: isActive ? '#dbeafe' : '#ecfdf5',
-                border: isActive ? '2px solid #2563eb' : '1px solid #bbf7d0',
+                background: isActive ? '#dbeafe' : isHovered ? '#f0fdf4' : '#ecfdf5',
+                border: isActive ? '2px solid #2563eb' : isHovered ? '2px solid #34d399' : '1px solid #bbf7d0',
+                transform: isHovered && !isActive ? 'translateY(-2px)' : 'none',
+                transition: 'all 0.2s ease',
                 borderRadius: '12px',
                 padding: '10px 12px',
                 cursor: 'pointer'
@@ -112,6 +125,7 @@ export default function RoutePlanning({
     selectedDestinationStation,
     onSelectNearestStation,
     onSelectDestinationStation,
+    onStationHover,
     plannedRouteData,
     setPlannedRouteData
 }) {
@@ -392,6 +406,8 @@ export default function RoutePlanning({
                                         setPlanningError('');
                                         onSelectNearestStation?.(clickedStation);
                                     }}
+                                    onMouseEnter={() => onStationHover?.(station)}
+                                    onMouseLeave={() => onStationHover?.(null)}
                                     badgeColor="#111827"
                                     isActive={selectedNearestStation?.number === station.number}
                                 />
@@ -421,6 +437,8 @@ export default function RoutePlanning({
                                             setPlanningError('');
                                             onSelectDestinationStation?.(clickedStation);
                                         }}
+                                        onMouseEnter={() => onStationHover?.(station)}
+                                        onMouseLeave={() => onStationHover?.(null)}
                                         badgeColor="#7c3aed"
                                         isActive={selectedDestinationStation?.number === station.number}
                                     />

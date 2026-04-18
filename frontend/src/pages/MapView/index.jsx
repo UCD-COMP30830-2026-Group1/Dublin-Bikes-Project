@@ -7,6 +7,7 @@ import Legend from "./components/Legend.jsx";
 import StationMarkers from "./components/StationMarkers.jsx";
 import RoutePolylines from "./components/RoutePolylines.jsx";
 import LocationPins from "./components/LocationPins.jsx";
+import MapBoundsFitter from "./components/MapBoundsFitter.jsx";
 
 export default function MapView({
     selectedStation,
@@ -17,6 +18,7 @@ export default function MapView({
     plannedRouteData,
     userLocation,
     destinationLocation,
+    hoveredStation,
     onStationClick
 }) {
     const [stations, setStations] = useState([]);
@@ -40,7 +42,7 @@ export default function MapView({
         <div style={{ width: '100%', height: '100%', position: 'relative' }}>
             <Map
                 defaultCenter={DUBLIN_CENTER}
-                defaultZoom={13}
+                defaultZoom={14}
                 gestureHandling="greedy"
                 disableDefaultUI={true}
                 mapId="DEMO_MAP_ID"
@@ -51,6 +53,10 @@ export default function MapView({
                     userLocation={userLocation}
                     destinationLocation={destinationLocation}
                 />
+                <MapBoundsFitter
+                    userLocation={userLocation}
+                    nearestStations={nearestStations}
+                />
 
                 <StationMarkers
                     stations={stations}
@@ -59,6 +65,7 @@ export default function MapView({
                     selectedDestinationStation={selectedDestinationStation}
                     nearestStations={nearestStations}
                     destinationNearestStations={destinationNearestStations}
+                    hoveredStation={hoveredStation}
                     onStationClick={onStationClick}
                 />
             </Map>
