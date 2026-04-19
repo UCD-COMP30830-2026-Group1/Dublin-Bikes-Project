@@ -1,7 +1,9 @@
 // src/api/stationService.js
-const API_DOMAIN = import.meta.env.VITE_API_DOMAIN || 'localhost:5000';
-const protocol = API_DOMAIN.includes('localhost') ? 'http' : 'https';
-const API_BASE_URL = `${protocol}://${API_DOMAIN}/api`;
+// Use relative paths. The browser will automatically complete the current domain name.
+// const API_DOMAIN = import.meta.env.VITE_API_DOMAIN || 'localhost:5000';
+// const protocol = API_DOMAIN.includes('localhost') ? 'http' : 'https';
+// const API_BASE_URL = `${protocol}://${API_DOMAIN}/api`;
+const API_BASE_URL='/api';
 
 // Used by StationList or anything that only needs static metadata
 export async function fetchStaticStations() {
@@ -14,5 +16,13 @@ export async function fetchStaticStations() {
 export async function fetchRealtimeStations() {
     const response = await fetch(`${API_BASE_URL}/stations/realtime`);
     if (!response.ok) throw new Error(`Realtime fetch failed: ${response.status}`);
+    return await response.json();
+}
+
+// Fetches ML prediction for a specific station.
+// Returns: { predicted_bikes, confidence, horizon_minutes, low_confidence, model_rmse, model_r2 }
+export async function fetchPrediction(stationNumber) {
+    const response = await fetch(`${API_BASE_URL}/stations/predict?number=${stationNumber}`);
+    if (!response.ok) throw new Error(`Prediction fetch failed: ${response.status}`);
     return await response.json();
 }

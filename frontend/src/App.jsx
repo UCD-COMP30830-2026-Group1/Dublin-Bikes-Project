@@ -1,87 +1,231 @@
 // src/App.jsx
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { APIProvider } from '@vis.gl/react-google-maps';
 import Header from "./layouts/Header.jsx";
 import Footer from "./layouts/Footer.jsx";
 import MapView from "./pages/MapView/index.jsx";
 import StationList from "./pages/StationList/index.jsx";
 import StationDetail from "./pages/StationList/components/StationDetail.jsx";
 import MoreInfoModal from "./pages/StationList/components/MoreInfoModal.jsx";
-import Dashboard from "./pages/Dashboard/index.jsx";
+import NearestStationsList from "./pages/StationList/components/NearestStationsList.jsx";
 import RoutePlanning from "./pages/RoutePlanning/index.jsx";
+import Dashboard from "./pages/Dashboard/index.jsx";
+import FloatingModeSwitch from "./pages/Shared/components/FloatingModeSwitch.jsx";
+import { fetchRealtimeStations } from "./api/stationService.js";
+import useUserLocation from "./pages/Shared/hooks/useUserLocation.js";
+import { getNearestStations } from "./pages/Shared/utils/stationHelpers.js";
 
 function App() {
+    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_KEY;
 
     const [viewMode, setViewMode] = useState('stations');
-    // Lifted up so MapView (markers) and sidebar (detail panel) share the same selected station
     const [selectedStation, setSelectedStation] = useState(null);
-    // Controls whether the More Information modal is open
+    const [selectedNearestStation, setSelectedNearestStation] = useState(null);
+    const [selectedDestinationStation, setSelectedDestinationStation] = useState(null);
+    const [hoveredStation, setHoveredStation] = useState(null);
+    const [plannedRouteData, setPlannedRouteData] = useState(null);
     const [showMoreInfo, setShowMoreInfo] = useState(false);
+    const [allStations, setAllStations] = useState([]);
+    const [nearestStations, setNearestStations] = useState([]);
+    const [destinationLocation, setDestinationLocation] = useState(null);
+    const [nearestDestinationStations, setNearestDestinationStations] = useState([]);
 
-    // Close station detail and reset modal state
+    const {
+        userLocation,
+        locationError,
+        locationLoading,
+        requestUserLocation,
+    } = useUserLocation();
+
+    useEffect(() => {
+        const loadStations = async () => {
+            try {
+                const response = await fetchRealtimeStations();
+                const data = response.data || response || [];
+                setAllStations(data);
+            } catch (error) {
+                console.error('Failed to load stations:', error);
+            }
+        };
+
+        loadStations();
+    }, []);
+
+    useEffect(() => {
+        const result = getNearestStations(allStations, userLocation, 3);
+        setNearestStations(result);
+    }, [allStations, userLocation]);
+
+    useEffect(() => {
+        const result = getNearestStations(allStations, destinationLocation, 3);
+        setNearestDestinationStations(result);
+    }, [allStations, destinationLocation]);
+
     const handleCloseStationDetail = () => {
         setSelectedStation(null);
         setShowMoreInfo(false);
     };
-    // Open More Information modal
+
     const handleOpenMoreInfo = () => {
         setShowMoreInfo(true);
     };
-    // Close More Information modal
+
     const handleCloseMoreInfo = () => {
         setShowMoreInfo(false);
     };
-    return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
-            <Header viewMode={viewMode} setViewMode={setViewMode} />
 
-            <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-                {/* Left Sidebar */}
-                <aside style={{
-                    width: '320px',
-                    backgroundColor: 'white',
-                    boxShadow: '2px 0 5px rgba(0,0,0,0.05)',
-                    zIndex: 5,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    padding: '20px',
-                    overflowY: 'auto',
-                }}>
-                    {viewMode === 'routes' ? (
-                        <RoutePlanning />
-                    ) : selectedStation ? (
-                        // Station clicked — show detail panel
-                        <StationDetail
-                            station={selectedStation}
-                            onClose={handleCloseStationDetail}
-                            onMoreInfoClick={handleOpenMoreInfo}
-                        />
-                    ) : (
-                        // Nothing selected — show station list
-                        <StationList />
-                    )}
-                </aside>
+    const handleSelectNearestStation = (station) => {
+        setSelectedNearestStation((prev) =>
+            prev?.number === station.number ? null : station
+        );
+        setPlannedRouteData(null);
+    };
 
-                {/* Right content */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                    <MapView
-                        selectedStation={selectedStation}
-                        onStationClick={(station) => {
-                            setSelectedStation(station);
-                            setShowMoreInfo(false);
-                        }}
-                    />
-                    <Dashboard />
-                </div>
+    const handleSelectDestinationStation = (station) => {
+        setSelectedDestinationStation((prev) =>
+            prev?.number === station.number ? null : station
+        );
+        setPlannedRouteData(null);
+    };
+
+    if (!apiKey) {
+        return (
+            <div style={{ padding: '24px', color: 'red' }}>
+                Google Maps API key is missing.
             </div>
-            {showMoreInfo && selectedStation && (
-                <MoreInfoModal
-                    station={selectedStation}
-                    onClose={handleCloseMoreInfo}
-                />
-            )}
+        );
+    }
 
-            <Footer />
-        </div>
+    return (
+        <APIProvider apiKey={apiKey} libraries={['places', 'geometry']} region="IE">
+            <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+                <Header viewMode={viewMode} setViewMode={setViewMode} />
+
+                <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+                    <aside
+                        style={{
+                            width: '320px',
+                            backgroundColor: '#f5f7f2',
+                            boxShadow: '2px 0 5px rgba(0,0,0,0.05)',
+                            zIndex: 5,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            padding: '20px',
+                            overflowY: 'auto',
+                            gap: '16px',
+                        }}
+                    >
+                        <FloatingModeSwitch
+                            viewMode={viewMode}
+                            setViewMode={setViewMode}
+                        />
+
+                        {viewMode === 'routes' ? (
+                            <RoutePlanning
+                                userLocation={userLocation}
+                                locationError={locationError}
+                                locationLoading={locationLoading}
+                                requestUserLocation={requestUserLocation}
+                                destinationLocation={destinationLocation}
+                                setDestinationLocation={setDestinationLocation}
+                                nearestStations={nearestStations}
+                                nearestDestinationStations={nearestDestinationStations}
+                                selectedNearestStation={selectedNearestStation}
+                                selectedDestinationStation={selectedDestinationStation}
+                                onSelectNearestStation={handleSelectNearestStation}
+                                onSelectDestinationStation={handleSelectDestinationStation}
+                                onStationHover={setHoveredStation}
+                                plannedRouteData={plannedRouteData}
+                                setPlannedRouteData={setPlannedRouteData}
+                            />
+                        ) : selectedStation ? (
+                            <StationDetail
+                                station={selectedStation}
+                                onClose={handleCloseStationDetail}
+                                onMoreInfoClick={handleOpenMoreInfo}
+                            />
+                        ) : nearestStations.length > 0 || userLocation || locationError ? (
+                            <NearestStationsList
+                                stations={nearestStations}
+                                userLocation={userLocation}
+                                locationError={locationError}
+                                onSelectStation={setSelectedStation}
+                                onStationHover={setHoveredStation}
+                            />
+                        ) : (
+                            <StationList />
+                        )}
+                    </aside>
+
+                    <div
+                        style={{
+                            flex: 1,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            overflow: 'hidden',
+                            position: 'relative',
+                        }}
+                    >
+                        <div
+                            style={{
+                                position: 'absolute',
+                                top: '16px',
+                                left: '24px',
+                                zIndex: 20,
+                            }}
+                        >
+                            <button
+                                onClick={requestUserLocation}
+                                disabled={locationLoading}
+                                style={{
+                                    height: '44px',
+                                    padding: '0 18px',
+                                    border: 'none',
+                                    borderRadius: '12px',
+                                    backgroundColor: '#2563eb',
+                                    color: '#fff',
+                                    fontWeight: 700,
+                                    fontSize: '15px',
+                                    cursor: locationLoading ? 'not-allowed' : 'pointer',
+                                    opacity: locationLoading ? 0.75 : 1,
+                                    boxShadow: '0 4px 12px rgba(0,0,0,0.18)',
+                                }}
+                            >
+                                {locationLoading ? 'Locating...' : '📍 Localise Me'}
+                            </button>
+                        </div>
+
+                        <MapView
+                            selectedStation={selectedStation}
+                            selectedNearestStation={selectedNearestStation}
+                            selectedDestinationStation={selectedDestinationStation}
+                            nearestStations={nearestStations}
+                            destinationNearestStations={nearestDestinationStations}
+                            plannedRouteData={plannedRouteData}
+                            userLocation={userLocation}
+                            destinationLocation={destinationLocation}
+                            onStationHover={setHoveredStation}
+                            onStationClick={(station) => {
+                                setSelectedStation(station);
+                                setShowMoreInfo(false);
+                                setViewMode('stations');
+                            }}
+                        />
+
+                        <Dashboard />
+                    </div>
+                </div>
+
+                {showMoreInfo && selectedStation && (
+                    <MoreInfoModal
+                        station={selectedStation}
+                        onClose={handleCloseMoreInfo}
+                    />
+                )}
+
+                <Footer />
+            </div>
+        </APIProvider>
     );
 }
 

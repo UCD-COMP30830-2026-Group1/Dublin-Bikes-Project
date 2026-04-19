@@ -1,4 +1,3 @@
-import settings as dbconfig
 import requests
 import json
 import time
