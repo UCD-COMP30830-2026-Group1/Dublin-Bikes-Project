@@ -1,8 +1,8 @@
 import os
 from typing import Any, Dict, Optional
-
 import requests
 from flask import Blueprint, jsonify, request
+import dbinfo
 
 route_planning_bp = Blueprint(
     "route_planning",
@@ -100,7 +100,7 @@ def _parse_duration_to_seconds(duration_value: Optional[str]) -> Optional[int]:
 
 
 def _compute_route(origin: Dict[str, float], destination: Dict[str, float], travel_mode: str) -> Dict[str, Any]:
-    api_key = os.getenv("GOOGLE_ROUTES_API_KEY")
+    api_key = dbinfo.VITE_GOOGLE_MAPS_KEY
     if not api_key:
         raise RuntimeError("GOOGLE_ROUTES_API_KEY is not set.")
 
