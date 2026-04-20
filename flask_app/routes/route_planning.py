@@ -108,6 +108,7 @@ def _compute_route(origin: Dict[str, float], destination: Dict[str, float], trav
         "Content-Type": "application/json",
         "X-Goog-Api-Key": api_key,
         "X-Goog-FieldMask": "routes.distanceMeters,routes.duration,routes.polyline.encodedPolyline",
+        "Referer": "http://localhost:5173",
     }
 
     body = _build_request_body(origin, destination, travel_mode)

@@ -1,200 +1,108 @@
-# flask_app/ml/train_model.py
-#
-# Trains the RandomForest model using the live AWS RDS database.
-# Can also fall back to final_merged_data.csv with --csv flag.
-#
-# Usage (from project root):
-#   python flask_app/ml/train_model.py              # uses live DB
-#   python flask_app/ml/train_model.py --csv path/to/final_merged_data.csv
-#
-# Output:
-#   flask_app/ml/model.pkl     — serialised RandomForestRegressor
-#   flask_app/ml/metrics.json  — RMSE, R², feature importances
-
 import os
 import sys
-import json
-import argparse
 import joblib
 import logging
-import numpy as np
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error, r2_score
 
-# ── Path fix ──────────────────────────────────────────────────────
+# ── Path Setup (Ensures Python can find feature_engineering.py) ──
 current_dir = os.path.dirname(os.path.abspath(__file__))   # flask_app/ml/
 flask_dir   = os.path.dirname(current_dir)                  # flask_app/
 root_dir    = os.path.dirname(flask_dir)                    # project root
 sys.path.append(root_dir)
-sys.path.append(current_dir)  # so feature_engineering imports cleanly
+sys.path.append(current_dir)
 
+# ── Import Shared Features ──
 from feature_engineering import build_features, FEATURE_COLUMNS, TARGET_COLUMN
 
-MODEL_PATH    = os.path.join(current_dir, "model.pkl")
-METRICS_PATH  = os.path.join(current_dir, "metrics.json")
-TRAINING_DAYS = 90
-MIN_ROWS      = 500
-
+# ── Configuration & Logging Setup ──
 logging.basicConfig(level=logging.INFO, format="%(asctime)s  %(message)s")
-log = logging.getLogger(__name__)
+log = logging.getLogger(__name__) # <--- This fixes your NameError!
+
+MODEL_PATH = os.path.join(current_dir, "model.pkl")
 
 
-def load_from_db(engine) -> pd.DataFrame:
+def load_from_csv(folder_path: str) -> pd.DataFrame:
     """
-    Joins availability + station + weather_current by matching on hour.
-
-    Availability is scraped every 5 minutes.
-    weather_current is stored once per hour.
-    We match them by truncating availability.last_update to the hour.
-
-    Returns a flat DataFrame ready for build_features().
+    Simulates the DB join by merging availability.csv and weather_hourly.csv
     """
-    cutoff = datetime.now() - timedelta(days=TRAINING_DAYS)
-    cutoff_str = cutoff.strftime("%Y-%m-%d %H:%M:%S")
+    log.info(f"Loading and merging CSVs from: {folder_path}")
+    
+    # 1. Load the core files
+    avail = pd.read_csv(os.path.join(folder_path, 'availability.csv'))
+    weather = pd.read_csv(os.path.join(folder_path, 'weather_hourly.csv'))
+    
+    # 2. Convert Timestamps
+    avail['last_update'] = pd.to_datetime(avail['last_update'])
+    weather['dt'] = pd.to_datetime(weather['dt'], unit='s', errors='coerce')
 
-    query = f"""
-        SELECT
-            a.number,
-            a.last_update,
-            a.available_bikes,
-            s.bike_stands,
-            w.temp,
-            w.humidity,
-            w.pressure,
-            w.wind_speed,
-            COALESCE(w.rain_1h, 0.0) AS rain_1h
-        FROM availability a
-        JOIN station s
-            ON a.number = s.number
-        LEFT JOIN weather_current w
-            ON DATE_FORMAT(a.last_update, '%%Y-%%m-%%d %%H:00:00') =
-               DATE_FORMAT(w.dt,          '%%Y-%%m-%%d %%H:00:00')
-        WHERE a.last_update >= '{cutoff_str}'
-          AND a.available_bikes IS NOT NULL
-        ORDER BY a.last_update DESC
-    """
-    log.info(f"Querying DB for last {TRAINING_DAYS} days...")
-    df = pd.read_sql(query, engine)
-    log.info(f"  Loaded {len(df):,} rows, {df['number'].nunique()} stations.")
-    return df
+    # 3. Perform the "Virtual Join"
+    log.info("Aligning bike data with weather timestamps...")
+    df = pd.merge_asof(
+        avail.sort_values('last_update'),
+        weather.sort_values('dt'),
+        left_on='last_update',
+        right_on='dt',
+        direction='backward'
+    )
 
-
-def load_from_csv(csv_path: str) -> pd.DataFrame:
-    """
-    Loads final_merged_data.csv and maps its columns to match
-    the DB schema expected by build_features().
-
-    CSV columns used:
-        station_id          → number
-        last_reported       → last_update
-        num_bikes_available → available_bikes
-        capacity            → bike_stands
-        max_air_temperature_celsius + min → averaged → temp
-        max_relative_humidity_percent     → humidity
-        max_barometric_pressure_hpa       → pressure
-        (no wind_speed / rain_1h in CSV — filled with 0)
-    """
-    log.info(f"Loading from CSV: {csv_path}")
-    df = pd.read_csv(csv_path)
-    log.info(f"  Loaded {len(df):,} rows.")
-
+    # 4. Handle Missing Columns & Fill Gaps
     df = df.rename(columns={
-        "station_id":          "number",
-        "last_reported":       "last_update",
-        "num_bikes_available": "available_bikes",
-        "capacity":            "bike_stands",
+        "temp_max": "temp", 
     })
+    
+    # Carry forward the last known weather
+    df = df.sort_values('last_update').ffill().fillna(0)
 
-    df["temp"]       = (df["max_air_temperature_celsius"] + df["min_air_temperature_celsius"]) / 2
-    df["humidity"]   = df["max_relative_humidity_percent"]
-    df["pressure"]   = df["max_barometric_pressure_hpa"]
-    df["wind_speed"] = 0.0   # not in CSV
-    df["rain_1h"]    = 0.0   # not in CSV
+    # 5. Final Column Selection
+    if 'bike_stands' not in df.columns and 'available_bike_stands' in df.columns:
+        df['bike_stands'] = df['available_bikes'] + df['available_bike_stands']
 
+    log.info(f"Merged result: {len(df):,} rows ready for feature engineering.")
+    
     return df[["number", "last_update", "available_bikes",
-               "bike_stands", "temp", "humidity", "pressure",
+               "bike_stands", "temp", "humidity",
                "wind_speed", "rain_1h"]]
 
 
-def train(df: pd.DataFrame) -> dict:
-    """Core training logic. Accepts a DataFrame from any source."""
-
-    if len(df) < MIN_ROWS:
-        log.error(f"Only {len(df)} rows — need at least {MIN_ROWS}. Aborting.")
-        sys.exit(1)
-
-    df = build_features(df)
-    df = df.dropna(subset=FEATURE_COLUMNS + [TARGET_COLUMN])
-
-    X = df[FEATURE_COLUMNS]
-    y = df[TARGET_COLUMN]
-
-    log.info(f"Training on {len(X):,} rows, {len(FEATURE_COLUMNS)} features.")
-
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42
-    )
-
-    log.info("Fitting RandomForestRegressor...")
+def train_local_model():
+    """
+    Orchestrates the local training flow: 
+    Load Folder -> Merge CSVs -> Build Features -> Train & Save.
+    """
+    # 1. Path to 4 CSVs (Running from root directory)
+    data_path = "data/dataset/ml_training_data/"
+    
+    # 2. Load the raw merged dataframe from the folder
+    raw_df = load_from_csv(data_path) 
+    
+    # 3. Transform raw data into ML features (hour, day_of_week, etc.)
+    log.info("Transforming raw data into model features...")
+    processed_df = build_features(raw_df)
+    
+    # 4. Drop any rows with missing required columns
+    processed_df = processed_df.dropna(subset=FEATURE_COLUMNS + [TARGET_COLUMN])
+    
+    # 5. Define X (features) and y (target)
+    X = processed_df[FEATURE_COLUMNS]
+    y = processed_df[TARGET_COLUMN]
+    
+    log.info(f"Training RandomForest model on {len(X):,} rows. This might take a minute...")
+    
+    # 6. Initialize and Fit
     model = RandomForestRegressor(
-        n_estimators=100,
-        max_depth=12,
-        min_samples_leaf=5,
-        random_state=42,
-        n_jobs=-1,
+        n_estimators=100, 
+        max_depth=12,      
+        random_state=42, 
+        n_jobs=-1          
     )
-    model.fit(X_train, y_train)
-
-    y_pred = model.predict(X_test)
-    rmse   = float(np.sqrt(mean_squared_error(y_test, y_pred)))
-    r2     = float(r2_score(y_test, y_pred))
-    log.info(f"  RMSE: {rmse:.3f}   R²: {r2:.3f}")
-
-    log.info("Feature importances:")
-    for feat, imp in sorted(zip(FEATURE_COLUMNS, model.feature_importances_), key=lambda x: -x[1]):
-        log.info(f"  {feat}: {imp:.3f}")
-
+    model.fit(X, y)
+    
+    # 7. Save the model
     joblib.dump(model, MODEL_PATH)
-    log.info(f"Model saved → {MODEL_PATH}")
-
-    metrics = {
-        "trained_at":    datetime.now().isoformat(),
-        "training_rows": int(len(X_train)),
-        "test_rows":     int(len(X_test)),
-        "rmse":          round(rmse, 4),
-        "r2":            round(r2, 4),
-        "features":      FEATURE_COLUMNS,
-        "importances":   {f: round(float(i), 4)
-                          for f, i in zip(FEATURE_COLUMNS, model.feature_importances_)},
-    }
-    with open(METRICS_PATH, "w") as f:
-        json.dump(metrics, f, indent=2)
-    log.info(f"Metrics saved → {METRICS_PATH}")
-
-    return metrics
+    log.info(f"Model saved successfully to: {MODEL_PATH}")
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--csv", type=str, default=None,
-                        help="Path to final_merged_data.csv (optional, uses DB by default)")
-    args = parser.parse_args()
-
-    if args.csv:
-        df = load_from_csv(args.csv)
-    else:
-        try:
-            import dbinfo
-            from sqlalchemy import create_engine
-            engine = create_engine(dbinfo.URI_ML)
-            df = load_from_db(engine)
-        except Exception as e:
-            log.error(f"DB load failed: {e}")
-            log.error("Tip: use --csv final_merged_data.csv to train from file instead.")
-            sys.exit(1)
-
-    metrics = train(df)
-    log.info(f"Done. RMSE={metrics['rmse']}  R²={metrics['r2']}")
+    train_local_model()

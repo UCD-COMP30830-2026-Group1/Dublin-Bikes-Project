@@ -1,5 +1,8 @@
 from flask import Flask, jsonify, Blueprint
 from datetime import datetime,timezone
+
+from sqlalchemy import func
+
 from common.database import SessionLocal
 from common.api_response import ApiResponse
 from common.extensions import cache
@@ -58,11 +61,16 @@ def get_weather_24hours():
     session = SessionLocal()
     try:
         now = datetime.now(timezone.utc)
+        latest_scrape_time = session.query(func.max(WeatherHourly.dt)).scalar()
+
+        if not latest_scrape_time:
+            return ApiResponse.error(message="No forecast data in database.", code=404)
 
         upcoming_forecasts=(
             session.query(WeatherHourly)
-            .filter(WeatherHourly.dt>=now)
-            .order_by(WeatherHourly.dt.asc())
+            .filter(WeatherHourly.dt == latest_scrape_time)
+            .filter(WeatherHourly.future_dt > now)
+            .order_by(WeatherHourly.future_dt.asc())
             .limit(24)
             .all()
         )
@@ -74,7 +82,7 @@ def get_weather_24hours():
         # get24 hours data
         for hour in upcoming_forecasts:
             hourly_record = {
-                "time": hour.dt.isoformat() if hasattr(hour.dt, 'isoformat') else hour.dt,
+                "time": hour.future_dt.isoformat() if hasattr(hour.future_dt, 'isoformat') else hour.future_dt,
                 "temp": hour.temp,
                 "humidity": hour.humidity,
                 "wind_speed": hour.wind_speed,

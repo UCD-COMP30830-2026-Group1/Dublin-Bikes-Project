@@ -22,6 +22,7 @@ function App() {
     const [selectedStation, setSelectedStation] = useState(null);
     const [selectedNearestStation, setSelectedNearestStation] = useState(null);
     const [selectedDestinationStation, setSelectedDestinationStation] = useState(null);
+    const [hoveredStation, setHoveredStation] = useState(null);
     const [plannedRouteData, setPlannedRouteData] = useState(null);
     const [showMoreInfo, setShowMoreInfo] = useState(false);
     const [allStations, setAllStations] = useState([]);
@@ -104,7 +105,7 @@ function App() {
                     <aside
                         style={{
                             width: '320px',
-                            backgroundColor: 'white',
+                            backgroundColor: '#f5f7f2',
                             boxShadow: '2px 0 5px rgba(0,0,0,0.05)',
                             zIndex: 5,
                             display: 'flex',
@@ -133,6 +134,7 @@ function App() {
                                 selectedDestinationStation={selectedDestinationStation}
                                 onSelectNearestStation={handleSelectNearestStation}
                                 onSelectDestinationStation={handleSelectDestinationStation}
+                                onStationHover={setHoveredStation}
                                 plannedRouteData={plannedRouteData}
                                 setPlannedRouteData={setPlannedRouteData}
                             />
@@ -148,6 +150,7 @@ function App() {
                                 userLocation={userLocation}
                                 locationError={locationError}
                                 onSelectStation={setSelectedStation}
+                                onStationHover={setHoveredStation}
                             />
                         ) : (
                             <StationList />
@@ -201,6 +204,7 @@ function App() {
                             plannedRouteData={plannedRouteData}
                             userLocation={userLocation}
                             destinationLocation={destinationLocation}
+                            onStationHover={setHoveredStation}
                             onStationClick={(station) => {
                                 setSelectedStation(station);
                                 setShowMoreInfo(false);

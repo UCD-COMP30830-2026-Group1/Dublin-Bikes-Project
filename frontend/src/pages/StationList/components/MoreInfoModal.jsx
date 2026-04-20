@@ -1,3 +1,4 @@
+//src/StationList/components/MoreInfoModal.jsx
 import { useState } from 'react';
 import AiPredictionCard from './AiPredictionCard';
 import UsageInsightsCard from './UsageInsightsCard';

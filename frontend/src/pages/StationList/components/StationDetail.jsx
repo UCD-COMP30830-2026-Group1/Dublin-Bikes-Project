@@ -128,7 +128,7 @@ export default function StationDetail({ station, onClose }) {
             {/* ── ML Prediction Panel ── */}
             <div>
                 <p style={{ fontWeight: '700', fontSize: '0.9rem', marginBottom: '12px' }}>
-                    🤖 AI Prediction — next 30 min
+                    Number of bikes predicted to be available in the next 30 minutes (AI-powered forecast)
                 </p>
 
                 {predLoading && (
@@ -189,7 +189,7 @@ export default function StationDetail({ station, onClose }) {
                                 background: '#FEF3C7', borderRadius: '6px',
                                 padding: '8px 10px', fontSize: '0.75rem', color: '#92400E',
                             }}>
-                                ⚠️ Low confidence — prediction may be less accurate for this station.
+                                Low confidence — prediction may be less accurate for this station.
                             </div>
                         )}
                     </div>
