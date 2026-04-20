@@ -19,10 +19,10 @@ export async function fetchRealtimeStations() {
     return await response.json();
 }
 
-// Fetches ML prediction for a specific station.
-// Returns: { predicted_bikes, confidence, horizon_minutes, low_confidence, model_rmse, model_r2 }
+// Fetches ML prediction for a specific station. Returns: { predicted_bikes, confidence, horizon_minutes, low_confidence, model_rmse, model_r2 }
 export async function fetchPrediction(stationNumber) {
     const response = await fetch(`${API_BASE_URL}/stations/predict?number=${stationNumber}`);
     if (!response.ok) throw new Error(`Prediction fetch failed: ${response.status}`);
     return await response.json();
 }
+ 
