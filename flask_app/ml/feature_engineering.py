@@ -11,11 +11,11 @@
 # station:        number, address, banking, bike_stands,
 #                 name, position_lat, position_lng
 #
-# weather_current: dt, feels_like, humidity, pressure, sunrise, sunset,
+# weather_current: dt, feels_like, humidity, sunrise, sunset,
 #                  temp, uvi, weather_id, wind_gust, wind_speed,
 #                  rain_1h, snow_1h
 #
-# weather_hourly:  dt, future_dt, feels_like, humidity, pop, pressure,
+# weather_hourly:  dt, future_dt, feels_like, humidity, pop,
 #                  temp, uvi, weather_id, wind_speed, wind_gust,
 #                  rain_1h, snow_1h
 #
@@ -36,7 +36,6 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
         bike_stands     — total capacity (int)
         temp            — °C float (from weather_current)
         humidity        — % int (from weather_current)
-        pressure        — hPa int (from weather_current)
         wind_speed      — m/s float (from weather_current)
         rain_1h         — mm float (from weather_current, nullable)
 
@@ -48,7 +47,6 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
         bike_stands     — total capacity
         temp            — air temperature °C
         humidity        — relative humidity %
-        pressure        — barometric pressure hPa
         wind_speed      — wind speed m/s
         rain_1h         — precipitation mm (0 if null)
     """
@@ -64,7 +62,6 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
     # Weather features — fill nulls with safe defaults
     df["temp"]       = df["temp"].fillna(10.0)
     df["humidity"]   = df["humidity"].fillna(75)
-    df["pressure"]   = df["pressure"].fillna(1013)
     df["wind_speed"] = df["wind_speed"].fillna(5.0)
     df["rain_1h"]    = df["rain_1h"].fillna(0.0)
     df["bike_stands"] = df["bike_stands"].fillna(20).astype(int)
@@ -81,7 +78,6 @@ FEATURE_COLUMNS = [
     "bike_stands",
     "temp",
     "humidity",
-    "pressure",
     "wind_speed",
     "rain_1h",
 ]

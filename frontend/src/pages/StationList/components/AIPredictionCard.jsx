@@ -16,7 +16,7 @@ export default function AiPredictionCard() {
                     marginBottom: '14px'
                 }}
             >
-                🕒 AI Prediction
+                AI Prediction
             </div>
 
             <div
