@@ -13,7 +13,7 @@ sys.path.append(root_dir)
 
 import dbinfo
 from sqlalchemy import create_engine
-from flask_app.ml.train_model import load_from_db, train
+from flask_app.ml.train_model import load_from_csv, train_local_model
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [RETRAIN] %(message)s")
 log = logging.getLogger(__name__)
@@ -22,8 +22,8 @@ if __name__ == "__main__":
     log.info("=== Weekly retraining started ===")
     try:
         engine = create_engine(dbinfo.URI_ML)
-        df = load_from_db(engine)
-        metrics = train(df)
+        df = load_from_csv(engine)
+        metrics = train_local_model(df)
         log.info(f"=== Done. RMSE={metrics['rmse']}  R²={metrics['r2']} ===")
         sys.exit(0)
     except Exception as e:
