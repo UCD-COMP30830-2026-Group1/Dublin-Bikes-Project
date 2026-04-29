@@ -90,7 +90,7 @@ def get_static_stations():
         print(f"====Synchronization complete. New additions: {new_count}, Updates: {update_count}.")
 
     except Exception as e:
-        session.rollback()  # 出错就回滚，保持数据库干净
+        session.rollback()
         print(e)
         traceback.print_exc()
     finally:
