@@ -42,7 +42,7 @@ def main():
             r = requests.get("https://api.openweathermap.org/data/2.5/weather", params={
                 "lat": 53.3498, 
                 "lon": -6.2603,
-                "appid": "d92ff70eef512e7502d589d7fd360ac9",
+                "appid": "",
                 "units": "metric"
             }, timeout=30)
             r.raise_for_status()
