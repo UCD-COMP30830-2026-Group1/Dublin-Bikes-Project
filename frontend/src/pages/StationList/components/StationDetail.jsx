@@ -1,10 +1,11 @@
-// src/pages/StationList/components/StationDetail.jsx
-// Full replacement — adds ML prediction panel below Quick Stats
+// src/pages/StationList/components/StationDetail.jsx. Full replacement — adds ML prediction panel below Quick Stats
 
 import { useEffect, useState } from 'react';
 import { fetchPrediction } from '../../../api/stationService.js';
 
-export default function StationDetail({ station, onClose }) {
+
+export default function StationDetail({ station, onClose, onMoreInfo, mode = "sidebar" }) {
+    const isPage = mode === "page";
     const [prediction, setPrediction]   = useState(null);
     const [predLoading, setPredLoading] = useState(true);
     const [predError, setPredError]     = useState(null);
@@ -47,7 +48,12 @@ export default function StationDetail({ station, onClose }) {
     };
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <div style={{ display: 'flex',
+        flexDirection: 'column', 
+        height: '100%',
+        padding: isPage ? '24px' : '0',
+        background: isPage ? 'white' : 'none', 
+        }}>
 
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
@@ -56,8 +62,10 @@ export default function StationDetail({ station, onClose }) {
                 </h2>
                 <button onClick={onClose} style={{
                     background: 'none', border: 'none', fontSize: '20px',
-                    cursor: 'pointer', color: '#666', marginLeft: '8px', lineHeight: 1,
-                }}>×</button>
+                    cursor: 'pointer', color: '#666', marginLeft: '8px', lineHeight: 1
+                }}>
+                    {isPage ? '←' : '×'}
+                </button>
             </div>
 
             <hr style={{ marginBottom: '16px', borderColor: '#eee' }} />
@@ -68,7 +76,7 @@ export default function StationDetail({ station, onClose }) {
                     flex: 1, background: '#f0fdf4', borderRadius: '10px',
                     padding: '14px', display: 'flex', flexDirection: 'column', gap: '4px',
                 }}>
-                    <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#16a34a' }}>🚲 Bikes</div>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#16a34a' }}> Bikes</div>
                     <div style={{ fontSize: '2rem', fontWeight: '800', color: '#15803d', lineHeight: 1 }}>{bikes}</div>
                     <div style={{ fontSize: '0.75rem', color: '#666' }}>available now</div>
                 </div>
@@ -76,7 +84,7 @@ export default function StationDetail({ station, onClose }) {
                     flex: 1, background: '#eff6ff', borderRadius: '10px',
                     padding: '14px', display: 'flex', flexDirection: 'column', gap: '4px',
                 }}>
-                    <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#1d4ed8' }}>📍 Docks</div>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#1d4ed8' }}> Docks</div>
                     <div style={{ fontSize: '2rem', fontWeight: '800', color: '#1d4ed8', lineHeight: 1 }}>{docks}</div>
                     <div style={{ fontSize: '0.75rem', color: '#666' }}>available now</div>
                 </div>
@@ -91,15 +99,19 @@ export default function StationDetail({ station, onClose }) {
             }}>
                 ➤ Get Directions
             </button>
-            <button disabled style={{
-                width: '100%', padding: '12px', marginBottom: '20px',
-                backgroundColor: '#16a34a', color: 'white', opacity: 0.85,
-                border: 'none', borderRadius: '8px',
-                fontSize: '0.9rem', fontWeight: '600', cursor: 'not-allowed',
-            }}>
-                ⓘ More Information
-            </button>
 
+            {/* More Information leading to onMoreInfo */}
+            <button
+                onClick={() => onMoreInfo(station)}
+                style={{
+                    width: '100%', padding: '12px', marginBottom: '20px',
+                    backgroundColor: '#16a34a', color: 'white',
+                    border: 'none', borderRadius: '8px',
+                    fontSize: '0.9rem', fontWeight: '600', cursor: 'pointer',
+                }}
+                >
+                    ⓘ More Information
+                    </button>
             <hr style={{ marginBottom: '16px', borderColor: '#eee' }} />
 
             {/* Quick Stats */}
@@ -128,7 +140,7 @@ export default function StationDetail({ station, onClose }) {
             {/* ── ML Prediction Panel ── */}
             <div>
                 <p style={{ fontWeight: '700', fontSize: '0.9rem', marginBottom: '12px' }}>
-                    Number of bikes predicted to be available in the next 30 minutes (AI-powered forecast)
+                    AI forecast: Number of available bikes in the next 30 minutes
                 </p>
 
                 {predLoading && (

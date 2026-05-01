@@ -14,10 +14,10 @@ import FloatingModeSwitch from "./pages/Shared/components/FloatingModeSwitch.jsx
 import { fetchRealtimeStations } from "./api/stationService.js";
 import useUserLocation from "./pages/Shared/hooks/useUserLocation.js";
 import { getNearestStations } from "./pages/Shared/utils/stationHelpers.js";
+import StationDetailPage from "./pages/StationList/components/StationDetailPage.jsx";
 
 function App() {
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_KEY;
-
     const [viewMode, setViewMode] = useState('stations');
     const [selectedStation, setSelectedStation] = useState(null);
     const [selectedNearestStation, setSelectedNearestStation] = useState(null);
@@ -29,6 +29,8 @@ function App() {
     const [nearestStations, setNearestStations] = useState([]);
     const [destinationLocation, setDestinationLocation] = useState(null);
     const [nearestDestinationStations, setNearestDestinationStations] = useState([]);
+    const [detailStation, setDetailStation] = useState(null);
+    const openStationDetail = (station) => {setDetailStation(station);};
 
     const {
         userLocation,
@@ -67,7 +69,7 @@ function App() {
     };
 
     const handleOpenMoreInfo = () => {
-        setShowMoreInfo(true);
+        setShowMoreInfo(selectedStation);
     };
 
     const handleCloseMoreInfo = () => {
@@ -87,6 +89,15 @@ function App() {
         );
         setPlannedRouteData(null);
     };
+
+    if (detailStation) {
+    return (
+        <StationDetailPage
+            station={detailStation}
+            onClose={() => setDetailStation(null)}
+            />
+        );
+    }
 
     if (!apiKey) {
         return (
@@ -142,7 +153,7 @@ function App() {
                             <StationDetail
                                 station={selectedStation}
                                 onClose={handleCloseStationDetail}
-                                onMoreInfoClick={handleOpenMoreInfo}
+                                onMoreInfo={(station) => setDetailStation(station)}
                             />
                         ) : nearestStations.length > 0 || userLocation || locationError ? (
                             <NearestStationsList

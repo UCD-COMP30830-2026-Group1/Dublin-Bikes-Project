@@ -25,4 +25,10 @@ export async function fetchPrediction(stationNumber) {
     if (!response.ok) throw new Error(`Prediction fetch failed: ${response.status}`);
     return await response.json();
 }
+ // Fetches historical availability for a specific station and returns nested data
+ export async function fetchHistoricalData(stationNumber) {
+    const response = await fetch(`${API_BASE_URL}/stations/historical?number=${stationNumber}`);
+    if (!response.ok) throw new Error(`Historical fetch failed: ${response.status}`);
+    return await response.json();
+}
  
