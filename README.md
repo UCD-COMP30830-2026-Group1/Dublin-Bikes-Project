@@ -194,6 +194,61 @@ python tests/smoke/test_predict.py --url https://bikes.thegaff.io
 
 ---
 
+## 🏛 Architecture Decisions
+
+### 1) Why dual-database strategy (Active DB + Archive DB)
+
+EC2's 1GB storage was insufficient for two months of historical data, so persistence was offloaded to Amazon RDS. As the archived dataset grew, mixing real-time API queries with full historical table scans caused increasing query latency.
+
+**Decision:** Within the same RDS instance, maintain two separate databases: an Active Database (7-day rolling window) for live API queries, and an Archive Database (2-month dataset) as a read-only ML training set.
+
+**Result:** Real-time query overhead reduced significantly by limiting the active dataset to 7 days; ML training data remains isolated and read-only, ensuring consistency between live data and model inference features.
+
+
+
+### 2) Why Flask over Django or FastAPI
+
+Backend responsibilities are clearly scoped: database queries, external API calls, and ML inference. Django's ORM, admin panel, and auth system add unnecessary complexity at this scale. FastAPI was considered but Flask-Caching integration and team familiarity made Flask the practical choice.
+
+
+
+### 3) Why Flask-Caching (SimpleCache) over Redis
+
+Redis runs as a separate service process and is designed for distributed, multi-instance architectures where cache needs to be shared across services. As this project is a single-instance monolith, SimpleCache running in-process is sufficient — there is no need for cross-service cache sharing. Flask-Caching's abstraction layer means migrating to Redis in the future requires only a one-line config change.
+
+
+
+### 4) Why React + Vite over course-recommended Jinja2
+
+Jinja2 returns a full HTML page on every navigation event. With 115 live station markers updating every 5 minutes, this causes unnecessary server load and poor UX. React SPA triggers only targeted data requests on interaction, keeping the map state without full-page reloads.
+
+
+
+### 5) Container resource allocation and why it changed
+
+**Initial allocation:** 0.40 CPU / 200MB per scraper, 0.60 CPU / 500MB for Flask backend.
+
+**Problem discovered:** Loading the Random Forest model into memory at runtime caused the backend to exceed its memory limit under concurrent requests.
+
+**Final allocation:** Scrapers reduced to 0.10 CPU (I/O-bound, not CPU-bound). Backend increased to 0.80 CPU / 700MB to handle ML inference alongside API serving. Swap memory enabled on EC2 host to absorb transient spikes.
+
+
+
+### 6) Why `expose` Flask port 5000 instead of `ports`
+
+Using `expose` (not `ports`) restricts Flask to the Docker internal network. Port 5000 is never reachable from outside EC2. All public traffic enters only through Nginx on 80/443, keeping the API layer unexposed.
+
+
+
+### 7) Testing strategy: two-layer approach
+
+Unit tests mock all external dependencies (DB, APIs, ML model) — fast, deterministic, environment-independent.
+
+Smoke tests hit the live endpoints on [bikes.thegaff.io](https://bikes.thegaff.io) after each deployment — verifies real connectivity without mocking anything.
+
+Route planning sits at 84% coverage because network fault simulation (timeouts, malformed responses) requires complex mock setups; identified as future work.
+
+---
 ## 🐳 Deployment Notes
 
 | Container | Memory | CPU | Role |
