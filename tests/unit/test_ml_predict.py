@@ -98,14 +98,23 @@ class TestPredictEndpoint:
         res = client.get("/api/stations/predict?number=abc")
         assert res.status_code == 400
 
-
-    def test_unknown_station_returns_404(self,client):
+    def test_unknown_station_returns_200(self, client):
+        """
+        Design Rationale: The team introduced a DB fallback mechanism in the predict endpoint.
+        When a station is not found, instead of returning 404, the endpoint now falls back
+        to mock data and returns 200 to keep the ML model testable offline.
+        This test verifies the fallback behaviour is working correctly.
+        """
         with patch("flask_app.routes.station_routes._model") as mock_model, \
-             patch("flask_app.routes.station_routes.SessionLocal") as MockSession:
+                patch("flask_app.routes.station_routes.SessionLocal") as MockSession:
             mock_model.estimators_ = [self._mock_estimator()]
             MockSession.return_value.query.return_value.filter_by.return_value.first.return_value = None
             res = client.get("/api/stations/predict?number=9999")
-        assert res.status_code == 404
+
+        assert res.status_code == 200
+        data = res.get_json()
+        # Verify the response explicitly flags that mock data was used
+        assert data["data"]["using_mock_data"] == True
 
 
     def test_no_model_returns_503(self,client):

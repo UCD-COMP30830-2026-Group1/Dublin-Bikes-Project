@@ -51,8 +51,10 @@ class TestSystemSmoke:
         assert response.status_code == 400
 
         response = client.get('/api/stations/predict?number=9999')
-        #Returning 404 indicates the database query logic is correct, but the site was not found.
-        assert response.status_code == 404
+        # After the DB fallback mechanism was introduced, an unknown station
+        # no longer returns 404. Instead, mock data is used and 200 is returned,
+        # allowing the ML model to remain testable in offline environments.
+        assert response.status_code == 200
 
     # 2.2 weather module smoke test
     def test_current_weather_alive(self, client):

@@ -1,4 +1,5 @@
 # tests/unit/test_weather_unit.py
+from datetime import timezone, datetime
 from unittest.mock import patch, MagicMock
 
 class TestWeatherUnit:
@@ -59,14 +60,20 @@ class TestWeatherUnit:
     # 2. Test /api/weather/forecast endpoint
     @patch('flask_app.routes.weather_routes.SessionLocal')
     def test_forecast_weather_success(self, mock_session_maker, client):
-        """Happy Path: Successfully retrieve the 24-hour weather forecast."""
+        """
+        Happy Path: Verifies the 24-hour forecast endpoint returns correctly structured data.
+        The query logic was updated to a two-step approach:
+          Step 1 — query the latest scrape timestamp via func.max().scalar()
+          Step 2 — filter forecast rows matching that timestamp with future_dt > now
+        The Mock chain is updated accordingly to reflect this structure.
+        """
         with client.application.app_context():
             from common.extensions import cache
             cache.clear()
 
         # Arrange: Construct 1 future forecast record (representing the 24 records)
         mock_hour = MagicMock()
-        mock_hour.dt.isoformat.return_value = "2026-04-19T12:00:00"
+        mock_hour.future_dt.isoformat.return_value = "2026-04-19T13:00:00"
         mock_hour.temp = 12.0
         mock_hour.humidity = 75
         mock_hour.wind_speed = 5.0
@@ -74,10 +81,13 @@ class TestWeatherUnit:
         mock_hour.snow_1h = 0.0
 
         mock_session = MagicMock()
-        # Simulate the long chained call: query().filter().order_by().limit().all()
-        # Logical highlight: The Mock bypasses the filter(dt >= now) logic and directly returns the mocked list.
-        mock_query = mock_session.query.return_value
-        mock_query.filter.return_value.order_by.return_value.limit.return_value.all.return_value = [mock_hour]
+        # Step 1: mock func.max().scalar() to return a valid latest timestamp
+        fake_latest_dt = datetime(2026, 4, 19, 12, 0, 0, tzinfo=timezone.utc)
+        mock_session.query.return_value.scalar.return_value = fake_latest_dt
+
+        # Step 2: mock the chained double-filter query to return forecast records
+        mock_session.query.return_value.filter.return_value.filter.return_value \
+            .order_by.return_value.limit.return_value.all.return_value = [mock_hour]
         mock_session_maker.return_value = mock_session
 
         # Act
@@ -95,13 +105,15 @@ class TestWeatherUnit:
 
     @patch('flask_app.routes.weather_routes.SessionLocal')
     def test_forecast_weather_empty_db(self, mock_session_maker, client):
-        """Sad Path: No forecast data in DB (or all data is expired and caught by the filter)."""
+        """Sad Path: When func.max().scalar() returns None (no data in DB),
+    the endpoint should return 404 gracefully rather than crashing."""
         with client.application.app_context():
             from common.extensions import cache
             cache.clear()
 
         mock_session = MagicMock()
-        mock_session.query.return_value.filter.return_value.order_by.return_value.limit.return_value.all.return_value = []
+        # Simulate an empty database: scalar() returns None, triggering the 404 branch
+        mock_session.query.return_value.scalar.return_value = None
         mock_session_maker.return_value = mock_session
 
         response = client.get('/api/weather/forecast')
