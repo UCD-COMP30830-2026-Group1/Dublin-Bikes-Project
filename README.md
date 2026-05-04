@@ -270,8 +270,8 @@ Route planning sits at 84% coverage because network fault simulation (timeouts, 
 
 **Group 1 — COMP30830 Software Engineering, UCD 2026**
 
-| Name | Contribution |
-|---|---|
-| Youssef Bouarada | 33.33% |
-| Yangxiaoshi Gao | 33.33% |
-| Yuhan Wang |33.33% |
+| Name | Contribution | Content |
+|---|---|---|
+| Youssef Bouarada | 33.33% | UI/UX mockups design, Weather data scraping (2-day collection), Station API backend (station_routes), Machine learning pipeline (data cleaning, feature engineering, Random Forest training), ML module smoke/unit testing, Frontend AI prediction integration; Scrum master of sprint 1&4; Report writing; Video editing |
+| Yangxiaoshi Gao | 33.33% | JCDecaux data scraping (2-day collection), Weather API backend (weather_routes), Frontend development (weather panel, station detail panel, Localise Me geolocation), Route planning (backend API integration & frontend UI), Initial deployment; Scrum master of sprint 3 |
+| Yuhan Wang |33.33% | Database schema design, Automated data pipeline & containerised scraper deployment, System deployment architecture(AWS EC2, Docker Compose, Nginx, SSL), Backend code integration, Smoke/unit testing(station, weather & route planning modules); Scrum master of sprint 2; Report writing |
